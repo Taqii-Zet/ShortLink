@@ -1,16 +1,16 @@
 /* =====================================================
-   taqi.qzz.io — App Logic
+   ShortLink — App Logic
    Storage: localStorage
    Redirect: ?s=<slug> query param
-   Domain: https://taqi.qzz.io
+   Domain: https://taqii-zet.github.io/ShortLink
    ===================================================== */
 
 'use strict';
 
 /* ── CONFIG ─────────────────────────────────────────── */
 const CFG = {
-  baseUrl:    'https://taqi.qzz.io',
-  displayBase: 'taqi.qzz.io',
+  baseUrl:    'https://taqii-zet.github.io/ShortLink',
+  displayBase: 'taqii-zet.github.io/ShortLink',
   storageKey: 'taqi_links',
   reserved:   ['s','r','api','www','admin','app','login','signup','help'],
 };
@@ -347,7 +347,7 @@ let _pendingSlug = null;
 function askDelete(slug) {
   _pendingSlug = slug;
   document.getElementById('modal-title').textContent = 'Delete this link?';
-  document.getElementById('modal-msg').textContent   = `taqi.qzz.io/?s=${slug} will be permanently removed.`;
+  document.getElementById('modal-msg').textContent   = `taqii-zet.github.io/ShortLink/?s=${slug} will be permanently removed.`;
   document.getElementById('modal-confirm').onclick   = doDelete;
   document.getElementById('modal-bg').style.display  = 'flex';
 }
