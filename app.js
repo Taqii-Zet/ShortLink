@@ -1,7 +1,7 @@
 /* =====================================================
    ShortLink — App Logic
    Storage: localStorage
-   Redirect: ?s=<slug> query param
+   Redirect: /<slug> path
    Domain: https://s.taqi.qzz.io
    ===================================================== */
 
@@ -15,8 +15,8 @@ const CFG = {
   reserved:   ['s','r','api','www','admin','app','login','signup','help'],
 };
 
-function buildShortUrl(slug)   { return `${CFG.baseUrl}/?s=${encodeURIComponent(slug)}`; }
-function buildDisplayUrl(slug) { return `${CFG.displayBase}/?s=${slug}`; }
+function buildShortUrl(slug)   { return `${CFG.baseUrl}/${encodeURIComponent(slug)}`; }
+function buildDisplayUrl(slug) { return `${CFG.displayBase}/${slug}`; }
 
 /* ── STORAGE ─────────────────────────────────────────── */
 function getLinks() {
@@ -54,15 +54,11 @@ if (card) {
 
 /* ── REDIRECT ───────────────────────────────────────── */
 (function handleRedirect() {
-  const params = new URLSearchParams(window.location.search);
-  const slug   = params.get('s');
-  if (!slug) return;
+  const slug = decodeURIComponent(window.location.pathname.slice(1)).replace(/\/$/, '');
+  if (!slug) return; // root path, show the landing page normally
 
   const entry = getLinks()[slug];
-  if (!entry) {
-    history.replaceState({}, '', window.location.pathname);
-    return;
-  }
+  if (!entry) return; // unknown slug, just show the landing page as-is
 
   bumpClick(slug);
 
@@ -356,7 +352,7 @@ let _pendingSlug = null;
 function askDelete(slug) {
   _pendingSlug = slug;
   document.getElementById('modal-title').textContent = 'Remove this link?';
-  document.getElementById('modal-msg').textContent   = `The link s.taqi.qzz.io/?s=${slug} will be permanently removed from your library.`;
+  document.getElementById('modal-msg').textContent   = `The link s.taqi.qzz.io/${slug} will be permanently removed from your library.`;
   document.getElementById('modal-confirm').onclick   = doDelete;
   document.getElementById('modal-bg').style.display  = 'flex';
 }
@@ -451,7 +447,7 @@ function downloadQr() {
     ctx.drawImage(img, 0, 0);
 
     const a = document.createElement('a');
-    a.download = `qrcode-${_qrCurrentUrl.split('=').pop() || 'shortlink'}.png`;
+    a.download = `qrcode-${_qrCurrentUrl.split('/').pop() || 'shortlink'}.png`;
     a.href = canvas.toDataURL('image/png');
     document.body.appendChild(a);
     a.click();
