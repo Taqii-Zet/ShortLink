@@ -386,46 +386,16 @@ function closeModal() { document.getElementById('modal-bg').style.display = 'non
 function handleModalBgClick(e) { if (e.target.id === 'modal-bg') closeModal(); }
 
 /* ── QR CODE ─────────────────────────────────────────── */
-let _qrCurrentUrl  = null;
-let _qrLibPromise  = null;
+let _qrCurrentUrl = null;
 
-// Several CDN mirrors in case one is slow, down, or blocked by the network/extensions.
-const QR_LIB_SOURCES = [
-  'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
-  'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js',
-];
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = src;
-    s.async = true;
-    s.onload = () => (typeof QRCode !== 'undefined')
-      ? resolve()
-      : reject(new Error('Loaded but QRCode is not defined: ' + src));
-    s.onerror = () => reject(new Error('Failed to load ' + src));
-    document.head.appendChild(s);
-  });
+// Generated as an <img>, not via a JS library — this only needs an image
+// request to succeed, which tends to work even when a page's CSP or an
+// extension blocks loading third-party <script> files.
+function qrImageUrl(url, sizePx) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${sizePx}x${sizePx}&margin=10&data=${encodeURIComponent(url)}`;
 }
 
-// Tries each CDN mirror in order until one succeeds; caches the resulting promise.
-function loadQrLib() {
-  if (typeof QRCode !== 'undefined') return Promise.resolve();
-  if (_qrLibPromise) return _qrLibPromise;
-
-  _qrLibPromise = QR_LIB_SOURCES.reduce(
-    (chain, src) => chain.catch(() => loadScript(src)),
-    Promise.reject(new Error('init'))
-  ).catch(err => {
-    _qrLibPromise = null; // allow retrying next time (e.g. connection restored)
-    throw err;
-  });
-
-  return _qrLibPromise;
-}
-
-async function showQrModal(url) {
+function showQrModal(url) {
   if (!url) {
     showToast('error', 'Shorten a link first to generate its QR code.');
     return;
@@ -436,40 +406,26 @@ async function showQrModal(url) {
   try { urlLabel.textContent = url.replace(/^https?:\/\//, ''); }
   catch { urlLabel.textContent = url; }
 
-  const canvas  = document.getElementById('qr-canvas');
+  const wrap   = document.getElementById('qr-canvas-wrap');
+  const img    = document.getElementById('qr-code-img');
   const modalBg = document.getElementById('qr-modal-bg');
-  const wrap    = canvas.closest('.qr-canvas-wrap');
 
-  // Clear any previous QR and show a loading state while the library/image generate.
-  const ctx = canvas.getContext && canvas.getContext('2d');
-  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   wrap.classList.add('loading');
+  img.style.visibility = 'hidden';
   modalBg.style.display = 'flex';
 
-  try {
-    await loadQrLib();
-  } catch (err) {
-    console.error(err);
+  img.crossOrigin = 'anonymous'; // lets the download button read the pixels back out
+  img.onload = () => {
+    if (_qrCurrentUrl !== url) return; // a newer link was opened while this was loading
     wrap.classList.remove('loading');
-    showToast('error', 'Could not load the QR generator. Check your connection and try again.');
-    return;
-  }
-
-  // The modal may have been closed while the library was loading, or the
-  // person may have opened a different link's QR code in the meantime.
-  if (modalBg.style.display === 'none' || _qrCurrentUrl !== url) return;
-
-  QRCode.toCanvas(canvas, url, {
-    width: 220,
-    margin: 2,
-    color: { dark: '#0f1115', light: '#ffffff' },
-  }, function (error) {
+    img.style.visibility = 'visible';
+  };
+  img.onerror = () => {
+    if (_qrCurrentUrl !== url) return;
     wrap.classList.remove('loading');
-    if (error) {
-      console.error(error);
-      showToast('error', 'Failed to generate QR code.');
-    }
-  });
+    showToast('error', 'Could not load the QR code. Check your internet connection.');
+  };
+  img.src = qrImageUrl(url, 240);
 }
 
 function closeQrModal() {
@@ -480,15 +436,34 @@ function closeQrModal() {
 function handleQrModalBgClick(e) { if (e.target.id === 'qr-modal-bg') closeQrModal(); }
 
 function downloadQr() {
-  const canvas = document.getElementById('qr-canvas');
-  if (!canvas || !_qrCurrentUrl) return;
-  const a = document.createElement('a');
-  a.download = `qrcode-${_qrCurrentUrl.split('=').pop() || 'shortlink'}.png`;
-  a.href = canvas.toDataURL('image/png');
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  showToast('ok', 'QR code downloaded.');
+  const img = document.getElementById('qr-code-img');
+  if (!_qrCurrentUrl || !img.complete || !img.naturalWidth) {
+    showToast('error', 'QR code is not ready yet.');
+    return;
+  }
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width  = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+
+    const a = document.createElement('a');
+    a.download = `qrcode-${_qrCurrentUrl.split('=').pop() || 'shortlink'}.png`;
+    a.href = canvas.toDataURL('image/png');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('ok', 'QR code downloaded.');
+  } catch (err) {
+    // Canvas got tainted (no CORS header on the image) — fall back to opening
+    // the image directly so the person can save it manually.
+    console.error(err);
+    window.open(img.src, '_blank');
+    showToast('ok', 'Opened the QR code in a new tab — right-click (or long-press) it to save.');
+  }
 }
 
 /* ── COPY ────────────────────────────────────────────── */

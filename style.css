@@ -988,7 +988,8 @@ body {
   margin-bottom: 16px;
   min-height: 220px;
 }
-.qr-canvas-wrap canvas { display: block; width: 100%; max-width: 220px; height: auto; }
+.qr-canvas-wrap canvas,
+.qr-canvas-wrap img { display: block; width: 100%; max-width: 220px; height: auto; }
 .qr-canvas-wrap.loading::after {
   content: '';
   position: absolute;
