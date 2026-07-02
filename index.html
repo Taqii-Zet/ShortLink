@@ -3,25 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShortLink — URL Shortener</title>
+  <title>ShortLink — Modern URL Shortener</title>
   <meta name="description" content="Paste a long URL, pick a custom slug, get a clean short link on taqii-zet.github.io/ShortLink. No sign-up, no tracking." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- Using Plus Jakarta Sans for a softer, more modern and readable UI -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/png" href="logo.png" />
 </head>
 <body>
 
+  <!-- Animated Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
   <!-- ===== REDIRECT OVERLAY ===== -->
   <div id="redirect-overlay" class="redirect-overlay" style="display:none">
     <div class="redir-inner">
-      <p class="redir-label">Redirecting</p>
+      <div class="redir-spinner"></div>
+      <p class="redir-label">Taking you there...</p>
       <div class="redir-url-wrap">
-        <span class="redir-arrow">→</span>
         <span id="redir-dest" class="redir-dest"></span>
       </div>
-      <div class="redir-bar"><div class="redir-fill"></div></div>
       <a id="redir-manual" href="#" class="redir-skip">skip &rarr;</a>
     </div>
   </div>
@@ -31,10 +38,11 @@
     <div class="nav-inner">
       <a href="index.html" class="nav-logo">
         <img src="logo.png" alt="ShortLink Logo" class="nav-logo-img" />
-        ShortLink
+        <span class="logo-text">ShortLink</span>
       </a>
       <div class="nav-links">
         <a href="#shorten-section" class="nav-a">Shorten</a>
+        <a href="#features-section" class="nav-a">Features</a>
         <a href="#history-section" class="nav-a">My Links</a>
       </div>
     </div>
@@ -45,28 +53,31 @@
     <div class="container">
 
       <div class="hero-head">
-        <p class="hero-label">URL SHORTENER</p>
-        <h1 class="hero-title">Your links,<br /><em>cut short.</em></h1>
-        <p class="hero-sub">Paste a URL. Pick a slug. Done.</p>
+        <div class="hero-badge">Free & Fast URL Shortener</div>
+        <h1 class="hero-title">Simplify your links,<br /><span class="text-gradient">expand your reach.</span></h1>
+        <p class="hero-sub">Transform long, ugly URLs into clean and memorable short links in seconds. Completely free and built for everyone.</p>
       </div>
 
-      <!-- FORM -->
-      <div class="form-wrap" id="form-wrap">
+      <!-- FORM CARD (Interactive) -->
+      <div class="form-card" id="form-card">
 
         <!-- URL input -->
         <div class="field" id="field-url">
-          <label class="field-label" for="long-url">LONG URL</label>
+          <label class="field-label" for="long-url">Destination URL</label>
           <div class="field-row">
+            <div class="input-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </div>
             <input
               type="url"
               id="long-url"
               class="field-input"
-              placeholder="https://your-very-long-link.com/goes/here?and=more&stuff=here"
+              placeholder="https://your-very-long-link.com/goes/here"
               autocomplete="off"
               spellcheck="false"
             />
             <button class="field-clear" id="clear-btn" onclick="clearURL()" aria-label="Clear" style="display:none">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
         </div>
@@ -74,7 +85,7 @@
         <!-- Slug input -->
         <div class="field" id="field-slug">
           <label class="field-label" for="custom-slug">
-            CUSTOM SLUG <span class="field-label-dim">— optional</span>
+            Custom Alias <span class="field-label-dim">(optional)</span>
           </label>
           <div class="slug-row">
             <span class="slug-pre" id="slug-pre">taqii-zet.github.io/ShortLink/?s=</span>
@@ -87,8 +98,8 @@
               autocomplete="off"
               spellcheck="false"
             />
-            <button class="dice-btn" id="dice-btn" onclick="generateRandom()" title="Generate random slug" aria-label="Generate random slug">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M16 8h.01M12 12h.01M8 16h.01M8 8h.01M16 16h.01"/></svg>
+            <button class="dice-btn" id="dice-btn" onclick="generateRandom()" title="Generate random alias" aria-label="Generate random alias">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 8h.01M12 12h.01M8 16h.01M8 8h.01M16 16h.01"/></svg>
             </button>
           </div>
           <div class="slug-status" id="slug-status"></div>
@@ -96,7 +107,7 @@
 
         <!-- Live preview -->
         <div class="live-preview" id="live-preview">
-          <span class="lp-label">PREVIEW</span>
+          <div class="lp-pulse"></div>
           <div class="lp-url-wrap" id="lp-url-wrap">
             <span class="lp-base">taqii-zet.github.io/ShortLink/?s=</span><span class="lp-slug" id="lp-slug">my-link</span><span class="lp-cursor"></span>
           </div>
@@ -105,68 +116,82 @@
         <!-- Shorten button -->
         <button class="shorten-btn" id="shorten-btn" onclick="shortenURL()">
           <span id="btn-label">Shorten URL</span>
-          <svg id="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <svg id="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
 
         <!-- Result -->
         <div class="result-wrap" id="result-wrap" style="display:none">
           <div class="result-top">
             <div class="result-check">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <span class="result-caption">Link created</span>
-            <button class="result-new" onclick="shortenAnother()">+ New</button>
+            <span class="result-caption">Your short link is ready!</span>
+            <button class="result-new" onclick="shortenAnother()">Create another</button>
           </div>
           <div class="result-body">
-            <a id="result-link" href="#" target="_blank" class="result-link"></a>
+            <div class="result-link-box">
+              <a id="result-link" href="#" target="_blank" class="result-link"></a>
+              <div class="result-orig" id="result-orig"></div>
+            </div>
             <button class="copy-btn" id="copy-btn" onclick="copyResult()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               <span>Copy</span>
             </button>
           </div>
-          <div class="result-orig" id="result-orig"></div>
         </div>
 
-      </div><!-- /form-wrap -->
+      </div><!-- /form-card -->
 
       <!-- stats -->
       <div class="hero-stats">
-        <div class="hstat"><span class="hstat-n" id="stat-total">0</span><span class="hstat-l">links created</span></div>
+        <div class="hstat">
+          <span class="hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+          <div class="hstat-info">
+            <span class="hstat-n" id="stat-total">0</span>
+            <span class="hstat-l">Links Created</span>
+          </div>
+        </div>
         <div class="hstat-sep"></div>
-        <div class="hstat"><span class="hstat-n" id="stat-clicks">0</span><span class="hstat-l">total clicks</span></div>
-        <div class="hstat-sep"></div>
-        <div class="hstat"><span class="hstat-n">∞</span><span class="hstat-l">never expires</span></div>
+        <div class="hstat">
+          <span class="hstat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg></span>
+          <div class="hstat-info">
+            <span class="hstat-n" id="stat-clicks">0</span>
+            <span class="hstat-l">Total Clicks</span>
+          </div>
+        </div>
       </div>
 
     </div>
   </section>
 
-  <!-- ===== HOW IT WORKS ===== -->
-  <section class="steps-section">
+  <!-- ===== FEATURES EXPLANATION ===== -->
+  <section class="features-section" id="features-section">
     <div class="container">
-      <div class="steps-row">
-        <div class="step">
-          <span class="step-n">01</span>
-          <div class="step-body">
-            <h3>Paste any URL</h3>
-            <p>Long social links, docs, articles — anything works.</p>
+      <div class="feat-header">
+        <h2>Why use ShortLink?</h2>
+        <p>A fast, reliable, and user-friendly tool to manage your URLs effortlessly.</p>
+      </div>
+      <div class="feat-grid">
+        <div class="feat-card">
+          <div class="feat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
+          <h3>Lightning Fast</h3>
+          <p>Instantly shorten your links without any delays. Our redirect engine is optimized for speed so your users never have to wait.</p>
         </div>
-        <div class="step-divider"></div>
-        <div class="step">
-          <span class="step-n">02</span>
-          <div class="step-body">
-            <h3>Pick a slug</h3>
-            <p>Type a custom alias or hit the dice for a random one.</p>
+        <div class="feat-card">
+          <div class="feat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </div>
+          <h3>Fully Customizable</h3>
+          <p>Don't settle for random gibberish. Create custom aliases that reflect your brand, campaign, or content perfectly.</p>
         </div>
-        <div class="step-divider"></div>
-        <div class="step">
-          <span class="step-n">03</span>
-          <div class="step-body">
-            <h3>Share the link</h3>
-            <p>One click to copy. Anyone who clicks it lands on your original URL.</p>
+        <div class="feat-card">
+          <div class="feat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </div>
+          <h3>Privacy First</h3>
+          <p>No mandatory sign-ups, no invasive tracking. All your link history is stored securely right in your own browser.</p>
         </div>
       </div>
     </div>
@@ -175,28 +200,34 @@
   <!-- ===== HISTORY ===== -->
   <section class="history-section" id="history-section">
     <div class="container">
-      <div class="hist-header">
-        <div>
-          <h2 class="hist-title">My Links</h2>
-          <p class="hist-sub">Saved in your browser — no account needed.</p>
-        </div>
-        <div class="hist-toolbar">
-          <div class="search-wrap">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="history-search" class="search-input" placeholder="Search..." oninput="filterHistory()" />
+      <div class="hist-card">
+        <div class="hist-header">
+          <div>
+            <h2 class="hist-title">My Links Library</h2>
+            <p class="hist-sub">Manage all the links you've shortened here.</p>
           </div>
-          <button class="clear-all-btn" id="clear-all-btn" onclick="clearAllLinks()" style="display:none">Clear all</button>
+          <div class="hist-toolbar">
+            <div class="search-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="history-search" class="search-input" placeholder="Search your links..." oninput="filterHistory()" />
+            </div>
+            <button class="clear-all-btn" id="clear-all-btn" onclick="clearAllLinks()" style="display:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              Clear All
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div id="history-list"></div>
+        <div id="history-list"></div>
 
-      <div id="history-empty" class="hist-empty">
-        <div class="hist-empty-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <div id="history-empty" class="hist-empty">
+          <div class="hist-empty-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <h3>Your library is empty</h3>
+          <p>Links you shorten will automatically appear here.</p>
+          <button class="btn-primary-sm" onclick="scrollToShorten()">Shorten a link</button>
         </div>
-        <p>No links yet. Shorten something above.</p>
-        <button class="btn-accent" onclick="scrollToShorten()">Get started</button>
       </div>
     </div>
   </section>
@@ -204,14 +235,22 @@
   <!-- ===== FOOTER ===== -->
   <footer class="footer">
     <div class="container footer-inner">
-      <span class="footer-brand">ShortLink</span>
-      <span class="footer-note">No server · No tracking · All local</span>
+      <div class="footer-brand">
+        <img src="logo.png" alt="Logo" class="footer-logo" />
+        ShortLink
+      </div>
+      <div class="footer-credit">
+        Built with <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--danger)" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> by <span class="builder-name">Imam Taqi</span>
+      </div>
     </div>
   </footer>
 
   <!-- ===== DELETE MODAL ===== -->
   <div class="modal-bg" id="modal-bg" style="display:none" onclick="handleModalBgClick(event)">
     <div class="modal-box">
+      <div class="modal-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </div>
       <h3 id="modal-title">Delete this link?</h3>
       <p id="modal-msg"></p>
       <div class="modal-btns">

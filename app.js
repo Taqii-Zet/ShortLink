@@ -39,6 +39,19 @@ function bumpClick(slug)  {
   if (m[slug]) { m[slug].clicks = (m[slug].clicks || 0) + 1; saveLinks(m); }
 }
 
+/* ── INTERACTIVE CARD EFFECT ────────────────────────── */
+// Magnetic/glow effect that follows the mouse on the form card
+const card = document.getElementById('form-card');
+if (card) {
+  card.addEventListener('mousemove', e => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--x', `${x}px`);
+    card.style.setProperty('--y', `${y}px`);
+  });
+}
+
 /* ── REDIRECT ───────────────────────────────────────── */
 (function handleRedirect() {
   const params = new URLSearchParams(window.location.search);
@@ -47,14 +60,12 @@ function bumpClick(slug)  {
 
   const entry = getLinks()[slug];
   if (!entry) {
-    // Bad slug — clean URL and stay on page
     history.replaceState({}, '', window.location.pathname);
     return;
   }
 
   bumpClick(slug);
 
-  // Show overlay
   const overlay = document.getElementById('redirect-overlay');
   const dest    = document.getElementById('redir-dest');
   const manual  = document.getElementById('redir-manual');
@@ -76,7 +87,7 @@ function validateSlug(slug) {
   if (!SLUG_RE.test(slug))               return { ok: false, msg: 'Use letters, numbers, - or _ only.' };
   if (CFG.reserved.includes(slug.toLowerCase())) return { ok: false, msg: `"${slug}" is reserved.` };
   if (getLinks()[slug])                  return { ok: false, msg: 'Already taken. Try another!' };
-  return { ok: true, msg: '✓ Available' };
+  return { ok: true, msg: 'Awesome! It\'s available.' };
 }
 
 /* ── WORD LIST (for random slugs) ────────────────────── */
@@ -100,10 +111,10 @@ function rndSlug() {
 }
 
 /* ── SCRAMBLE ANIMATION ─────────────────────────────── */
-const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_./?=';
+const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-function scrambleReveal(el, finalText, duration = 900) {
-  const totalFrames = Math.ceil(duration / 40);
+function scrambleReveal(el, finalText, duration = 800) {
+  const totalFrames = Math.ceil(duration / 30);
   let frame = 0;
 
   const tick = setInterval(() => {
@@ -111,13 +122,13 @@ function scrambleReveal(el, finalText, duration = 900) {
     const progress  = frame / totalFrames;
     const revealed  = Math.floor(progress * finalText.length);
     let out = finalText.slice(0, revealed);
-    const noise = Math.min(finalText.length - revealed, 5);
+    const noise = Math.min(finalText.length - revealed, 4);
     for (let i = 0; i < noise; i++) {
       out += CHARS[Math.floor(Math.random() * CHARS.length)];
     }
     el.textContent = out;
     if (frame >= totalFrames) { clearInterval(tick); el.textContent = finalText; }
-  }, 40);
+  }, 30);
 }
 
 /* ── LIVE PREVIEW ───────────────────────────────────── */
@@ -134,48 +145,43 @@ function shortenURL() {
   const urlEl   = document.getElementById('long-url');
   const slugEl  = document.getElementById('custom-slug');
   const btn     = document.getElementById('shorten-btn');
+  const rowEl   = urlEl.closest('.field-row');
 
   let rawUrl = urlEl.value.trim();
   let slug   = slugEl.value.trim();
 
-  // ── Validate URL
+  // Validate URL
   if (!rawUrl) {
-    urlEl.classList.add('err'); shake(urlEl.parentElement);
-    showToast('error', 'Please enter a URL.');
-    setTimeout(() => urlEl.classList.remove('err'), 1400);
+    rowEl.classList.add('err'); shake(rowEl);
+    showToast('error', 'Please enter a URL first.');
+    setTimeout(() => rowEl.classList.remove('err'), 1400);
     return;
   }
   if (!/^https?:\/\//i.test(rawUrl)) rawUrl = 'https://' + rawUrl;
   try { new URL(rawUrl); }
   catch {
-    urlEl.classList.add('err'); shake(urlEl.parentElement);
+    rowEl.classList.add('err'); shake(rowEl);
     showToast('error', 'That doesn\'t look like a valid URL.');
-    setTimeout(() => urlEl.classList.remove('err'), 1400);
+    setTimeout(() => rowEl.classList.remove('err'), 1400);
     return;
   }
 
-  // ── Validate slug
+  // Validate slug
   if (slug) {
     const v = validateSlug(slug);
     if (!v.ok) { showToast('error', v.msg); return; }
   } else {
-    // Auto-generate unique slug
     let attempt = rndSlug();
     let tries   = 0;
     while (getLinks()[attempt] && tries++ < 20) attempt = rndSlug();
     slug = attempt;
   }
 
-  // ── Animate button
+  // Animate button
   btn.disabled = true;
-  document.getElementById('btn-label').textContent = 'Cutting…';
+  document.getElementById('btn-label').textContent = 'Generating...';
 
-  // ── Animate the cut-line on the preview strip
-  const lp = document.getElementById('live-preview');
-  lp.classList.add('cutting');
-  setTimeout(() => lp.classList.remove('cutting'), 600);
-
-  // ── After brief delay, create link & show result
+  // Brief delay to feel like it's "processing"
   setTimeout(() => {
     const entry = addLink(slug, rawUrl);
     lastEntry   = entry;
@@ -186,8 +192,8 @@ function shortenURL() {
     showResult(entry);
     updateStats();
     renderHistory();
-    showToast('ok', 'Short link created!');
-  }, 660);
+    showToast('ok', 'Link successfully created!');
+  }, 600);
 }
 
 function showResult(entry) {
@@ -196,21 +202,17 @@ function showResult(entry) {
   const origEl = document.getElementById('result-orig');
   const cpBtn  = document.getElementById('copy-btn');
 
-  // Prep display
   linkEl.href = entry.short;
-  try { origEl.textContent = '→ ' + new URL(entry.original).hostname + '/...'; }
-  catch { origEl.textContent = '→ ' + entry.original.slice(0, 60); }
+  try { origEl.textContent = 'Redirects to: ' + new URL(entry.original).hostname; }
+  catch { origEl.textContent = 'Redirects to: ' + entry.original.slice(0, 40) + '...'; }
 
-  // Reset copy button
   cpBtn.classList.remove('copied');
-  cpBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span>`;
+  cpBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span>`;
 
-  // Show container
   wrap.style.display = 'block';
 
-  // Scramble the link text
   linkEl.textContent = '';
-  scrambleReveal(linkEl, entry.display, 800);
+  scrambleReveal(linkEl, entry.display, 700);
 }
 
 function copyResult() {
@@ -218,11 +220,11 @@ function copyResult() {
   copyText(lastEntry.short);
   const btn = document.getElementById('copy-btn');
   btn.classList.add('copied');
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Copied!</span>`;
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>Copied</span>`;
   setTimeout(() => {
     btn.classList.remove('copied');
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span>`;
-  }, 2200);
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span>`;
+  }, 2000);
 }
 
 function shortenAnother() {
@@ -252,7 +254,6 @@ function generateRandom() {
   updatePreview();
   validateSlugInput();
 
-  // Spin the dice icon
   const btn = document.getElementById('dice-btn');
   btn.style.transition = 'transform 0.3s ease';
   btn.style.transform  = 'rotate(180deg)';
@@ -276,19 +277,19 @@ function renderHistory(filter = '') {
   }
 
   empty.style.display = 'none';
-  caBtn.style.display = 'inline-flex';
+  caBtn.style.display = 'flex';
 
   const filtered = filter
-    ? entries.filter(e => e.slug.includes(filter) || e.original.toLowerCase().includes(filter))
+    ? entries.filter(e => e.slug.toLowerCase().includes(filter) || e.original.toLowerCase().includes(filter))
     : entries;
 
   if (filtered.length === 0) {
-    list.innerHTML = `<div style="padding:40px;text-align:center;color:var(--faint);font-size:.84rem">No results for "${esc(filter)}"</div>`;
+    list.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-faint);font-size:.9rem">No results found for "${esc(filter)}"</div>`;
     return;
   }
 
   list.innerHTML = filtered.map(e => {
-    let initials = '??';
+    let initials = 'URL';
     try { initials = new URL(e.original).hostname.replace('www.', '').slice(0, 2).toUpperCase(); } catch {}
     const clicks = e.clicks || 0;
     return `
@@ -303,11 +304,11 @@ function renderHistory(filter = '') {
       </div>
       <span class="hist-date">${ago(e.createdAt)}</span>
       <div class="hist-actions">
-        <button class="hbtn" title="Copy" onclick="copyHistItem('${esc(e.slug)}','${esc(e.short)}',this)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <button class="hbtn" title="Copy" onclick="copyHistItem('${esc(e.short)}',this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
         <button class="hbtn del" title="Delete" onclick="askDelete('${esc(e.slug)}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
       </div>
     </div>`;
@@ -331,14 +332,14 @@ function tickNum(el, target) {
   const from  = parseInt(el.textContent) || 0;
   if (from === target) return;
   const delta = target - from;
-  const steps = Math.min(Math.abs(delta), 15);
+  const steps = Math.min(Math.abs(delta), 20);
   let cur = from, i = 0;
   const t = setInterval(() => {
     i++;
     cur += delta / steps;
     el.textContent = Math.round(i < steps ? cur : target);
     if (i >= steps) clearInterval(t);
-  }, 25);
+  }, 20);
 }
 
 /* ── DELETE MODAL ────────────────────────────────────── */
@@ -346,8 +347,8 @@ let _pendingSlug = null;
 
 function askDelete(slug) {
   _pendingSlug = slug;
-  document.getElementById('modal-title').textContent = 'Delete this link?';
-  document.getElementById('modal-msg').textContent   = `taqii-zet.github.io/ShortLink/?s=${slug} will be permanently removed.`;
+  document.getElementById('modal-title').textContent = 'Remove this link?';
+  document.getElementById('modal-msg').textContent   = `The link taqii-zet.github.io/ShortLink/?s=${slug} will be permanently removed from your library.`;
   document.getElementById('modal-confirm').onclick   = doDelete;
   document.getElementById('modal-bg').style.display  = 'flex';
 }
@@ -357,18 +358,18 @@ function doDelete() {
   closeModal();
   renderHistory();
   updateStats();
-  showToast('ok', 'Link deleted.');
+  showToast('ok', 'Link removed successfully.');
 }
 
 function clearAllLinks() {
   document.getElementById('modal-title').textContent = 'Clear all links?';
-  document.getElementById('modal-msg').textContent   = 'All saved links will be permanently deleted.';
+  document.getElementById('modal-msg').textContent   = 'All your saved links will be permanently deleted. This action cannot be undone.';
   document.getElementById('modal-confirm').onclick   = () => {
     nukeLinks();
     closeModal();
     renderHistory();
     updateStats();
-    showToast('ok', 'All links cleared.');
+    showToast('ok', 'All links have been cleared.');
   };
   document.getElementById('modal-bg').style.display = 'flex';
 }
@@ -391,27 +392,27 @@ function fallback(str) {
   document.body.removeChild(ta);
 }
 
-function copyHistItem(slug, short, btn) {
+function copyHistItem(short, btn) {
   copyText(short);
-  showToast('ok', 'Copied!');
+  showToast('ok', 'Copied to clipboard');
   const orig = btn.innerHTML;
-  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
   btn.classList.add('copied-flash');
-  setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied-flash'); }, 1600);
+  setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied-flash'); }, 1500);
 }
 
 /* ── TOAST ───────────────────────────────────────────── */
 function showToast(type, msg) {
   const stack = document.getElementById('toast-stack');
   const icons = {
-    ok:  `<svg class="toast-ok"  width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`,
-    error:`<svg class="toast-err" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+    ok:  `<div class="toast-ok"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>`,
+    error:`<div class="toast-err"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>`,
   };
   const t = document.createElement('div');
   t.className = 'toast';
   t.innerHTML = `${icons[type] || ''}<span>${esc(msg)}</span>`;
   stack.appendChild(t);
-  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 220); }, 2400);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 200); }, 3000);
 }
 
 /* ── HELPERS ─────────────────────────────────────────── */
@@ -436,22 +437,19 @@ function shake(el) {
 
 function scrollToShorten() {
   document.getElementById('shorten-section').scrollIntoView({ behavior: 'smooth' });
-  setTimeout(() => document.getElementById('long-url').focus(), 600);
-}
-
-/* ── SLUG INPUT VALIDATION (live) ───────────────────── */
-function validateSlugInput() {
-  const slug = document.getElementById('custom-slug').value.trim();
-  const el   = document.getElementById('slug-status');
-  if (!slug) { el.textContent = ''; el.className = 'slug-status'; return; }
-  const v = validateSlug(slug);
-  el.textContent = v.ok ? (v.msg || '') : v.msg;
-  el.className   = `slug-status ${v.ok ? 'ok' : 'err'}`;
+  setTimeout(() => document.getElementById('long-url').focus(), 500);
 }
 
 /* ── EVENT LISTENERS ─────────────────────────────────── */
 document.getElementById('custom-slug').addEventListener('input', () => {
-  validateSlugInput();
+  const slug = document.getElementById('custom-slug').value.trim();
+  const el   = document.getElementById('slug-status');
+  if (!slug) { el.textContent = ''; el.className = 'slug-status'; }
+  else {
+    const v = validateSlug(slug);
+    el.textContent = v.ok ? (v.msg || '') : v.msg;
+    el.className   = `slug-status ${v.ok ? 'ok' : 'err'}`;
+  }
   updatePreview();
 });
 
