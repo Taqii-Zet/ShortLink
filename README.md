@@ -1,48 +1,59 @@
-# 🔗 ShortLink — URL Shortener
+# ShortLink — URL Shortener
 
-**ShortLink** adalah aplikasi penyingkat URL berbasis web yang minimalis, cepat, dan sepenuhnya berjalan di sisi klien (client-side). Tidak perlu mendaftar akun, bebas pelacakan, dan semua data tautan Anda disimpan dengan aman secara lokal di browser Anda.
+ShortLink adalah penyingkat URL berbasis web yang simpel dan ringan. Aplikasi ini sepenuhnya berjalan di sisi klien (client-side), artinya semua data tautan disimpan langsung di browser pengguna tanpa perlu database eksternal, akun, atau pelacakan privasi.
 
-> **Live Demo:** [taqii-zet.github.io/ShortLink](https://taqii-zet.github.io/ShortLink/)
-
----
-
-## ✨ Fitur Utama
-
-* **⚡ Penyingkat Instan:** Cukup tempel URL panjang Anda, dan dapatkan tautan pendek dalam hitungan detik.
-* **🎲 Custom Slug:** Tentukan sendiri kata kunci (*slug*) untuk tautan Anda, atau gunakan tombol dadu untuk menghasilkan *slug* acak secara otomatis.
-* **👁️ Live Preview:** Lihat tampilan tautan pendek Anda secara langsung saat Anda mengetik *slug*.
-* **📜 Riwayat Lokal (My Links):** Semua tautan yang telah Anda buat akan disimpan di browser menggunakan `localStorage`. Dilengkapi juga dengan fitur pencarian (*search bar*) untuk menyaring tautan.
-* **📊 Statistik Sederhana:** Memantau total tautan yang dibuat dan total klik secara keseluruhan.
-* **🛡️ Tanpa Server & Pelacakan:** 100% privasi terjaga. Tidak ada database eksternal, tidak ada cookies pelacak, semuanya berjalan di perangkat Anda.
-* **🌗 Tampilan Minimalis & Responsif:** Desain modern menggunakan font Inter dan DM Mono yang nyaman dilihat di perangkat mobile maupun desktop.
+Live Demo: https://taqii-zet.github.io/ShortLink/
 
 ---
 
-## 🛠️ Teknologi yang Digunakan
+## Fitur
 
-Aplikasi ini dibangun murni menggunakan teknologi web statis tanpa *framework* berat, sehingga sangat ringan dan cepat diakses:
-
-* **HTML5** – Struktur semantik halaman.
-* **CSS3** – Desain visual, *layouting* (Flexbox/Grid), dan animasi overlay.
-* **JavaScript (Vanilla)** – Logika penyingkatan, manajemen `localStorage`, deteksi parameter URL untuk *redirect*, pencarian riwayat, dan manipulasi DOM.
-
----
-
-## 🚀 Cara Kerja (Under the Hood)
-
-Karena proyek ini di-hosting di **GitHub Pages** yang bersifat statis, proses pemendekan tautan menggunakan trik parameter URL:
-
-1.  **Pembuatan Tautan:** Ketika Anda menyingkat URL, aplikasi menyimpan pasangan data `{ slug: long_url }` ke dalam `localStorage`.
-2.  **Pengalihan (Redirection):** Saat seseorang membuka tautan pendek (misal: `?s=custom-slug`), JavaScript di halaman `index.html` akan langsung mendeteksi parameter `s` tersebut, mengambil URL asli dari memori lokal (atau skema yang ditentukan), memunculkan efek *redirect overlay*, dan mengalihkan halaman ke tujuan asli.
+* Penyingkat tautan instan tanpa proses ribet.
+* Pilihan custom slug atau acak menggunakan generator tombol dadu.
+* Live preview tampilan URL pendek saat mengetik slug.
+* Riwayat pembuatan tautan (My Links) yang tersimpan di localStorage.
+* Fitur pencarian internal untuk menyaring riwayat tautan.
+* Counter sederhana untuk melihat total tautan yang dibuat dan jumlah klik.
+* 100% privasi aman karena tidak menggunakan server maupun pelacak eksternal.
 
 ---
 
-## 📂 Struktur File
+## Teknologi
 
-```text
+Proyek ini dibuat menggunakan teknologi web dasar agar performanya maksimal dan ringan:
+* HTML5 (Struktur halaman dan modal)
+* CSS3 (Layouting, responsivitas, dan efek overlay)
+* Vanilla JavaScript (Logika pemendekan, pengelolaan localStorage, dan sistem redirect parameter)
+
+---
+
+## Cara Kerja Redirection
+
+Karena aplikasi ini di-hosting di GitHub Pages yang bersifat statis, proses pengalihan menggunakan parameter URL:
+1. Ketika tautan diperpendek, data disimpan dengan format key-value `{ slug: long_url }` di localStorage.
+2. Saat ada yang mengakses URL dengan parameter (contoh: `?s=slug-kamu`), JavaScript di index.html akan langsung membaca parameter tersebut, mencocokkannya dengan memori lokal, menampilkan animasi redirect, lalu mengarahkan pengguna ke URL tujuan asli.
+
+---
+
+## Struktur File
+
 .
-├── index.html       # Struktur halaman utama & modal redirect
-├── style.css        # Desain visual dan animasi (belum termasuk di repositori ini)
-├── app.js           # Logika utama aplikasi (belum termasuk di repositori ini)
-├── logo.png         # Logo aplikasi
-└── README.md        # Dokumentasi proyek
+├── index.html       # Halaman utama dan komponen redirect
+├── style.css        # Styling UI
+├── app.js           # Logika utama aplikasi
+├── logo.png         # Aset logo
+└── README.md        # Dokumentasi
+
+---
+
+## Penggunaan Lokal
+
+Kalau mau coba jalankan atau edit proyek ini di lokal:
+
+1. Clone repositori:
+   git clone https://github.com/taqii-zet/ShortLink.git
+
+2. Masuk ke folder:
+   cd ShortLink
+
+3. Buka file index.html langsung di browser atau gunakan extension Live Server.
