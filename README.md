@@ -37,6 +37,7 @@ Karena aplikasi ini di-hosting di GitHub Pages yang bersifat statis, proses peng
 
 ## Struktur File
 
+```text
 .
 ├── index.html       # Halaman utama dan komponen redirect
 ├── style.css        # Styling UI
