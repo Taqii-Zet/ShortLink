@@ -211,6 +211,11 @@ function showResult(entry) {
 
   wrap.style.display = 'block';
 
+  // Auto scroll to result smoothly
+  setTimeout(() => {
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+
   linkEl.textContent = '';
   scrambleReveal(linkEl, entry.display, 700);
 }

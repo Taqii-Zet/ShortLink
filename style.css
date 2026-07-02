@@ -286,27 +286,33 @@ body {
 }
 .field-clear:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
 
-/* Slug split (stacked for long domains) */
+/* Slug split (side-by-side) */
 .slug-split {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .slug-pre-box {
   background: var(--bg-card);
   border: 1px dashed var(--border);
   border-radius: var(--r-md);
-  padding: 14px 16px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow-x: auto;
 }
 .slug-pre {
   font-family: var(--sans);
   font-size: 0.85rem;
   color: var(--text-mute);
+  white-space: nowrap;
   user-select: none;
 }
 .slug-input-box {
+  flex: 1;
+  min-width: 200px;
   display: flex;
   align-items: stretch;
   background: var(--bg-elev);
