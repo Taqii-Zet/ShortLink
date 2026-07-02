@@ -87,20 +87,24 @@
           <label class="field-label" for="custom-slug">
             Custom Alias <span class="field-label-dim">(optional)</span>
           </label>
-          <div class="slug-row">
-            <span class="slug-pre" id="slug-pre">taqii-zet.github.io/ShortLink/?s=</span>
-            <input
-              type="text"
-              id="custom-slug"
-              class="field-input slug-input"
-              placeholder="my-link"
-              maxlength="40"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <button class="dice-btn" id="dice-btn" onclick="generateRandom()" title="Generate random alias" aria-label="Generate random alias">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 8h.01M12 12h.01M8 16h.01M8 8h.01M16 16h.01"/></svg>
-            </button>
+          <div class="slug-split">
+            <div class="slug-pre-box">
+              <span class="slug-pre" id="slug-pre">taqii-zet.github.io/ShortLink/?s=</span>
+            </div>
+            <div class="slug-input-box">
+              <input
+                type="text"
+                id="custom-slug"
+                class="field-input slug-input"
+                placeholder="my-link"
+                maxlength="40"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button class="dice-btn" id="dice-btn" onclick="generateRandom()" title="Generate random alias" aria-label="Generate random alias">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 8h.01M12 12h.01M8 16h.01M8 8h.01M16 16h.01"/></svg>
+              </button>
+            </div>
           </div>
           <div class="slug-status" id="slug-status"></div>
         </div>

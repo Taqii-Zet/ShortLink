@@ -286,37 +286,48 @@ body {
 }
 .field-clear:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
 
-/* Slug row */
-.slug-row {
+/* Slug split */
+.slug-split {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+.slug-pre-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
   display: flex;
   align-items: center;
+  padding: 0 16px;
+}
+.slug-pre {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--text-mute);
+  white-space: nowrap;
+  user-select: none;
+}
+.slug-input-box {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   transition: all 0.2s;
   overflow: hidden;
 }
-.slug-row:focus-within {
+.slug-input-box:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
-
-.slug-pre {
-  font-family: var(--mono);
-  font-size: 0.85rem;
-  color: var(--text-mute);
-  padding: 14px 0 14px 16px;
-  white-space: nowrap;
-  user-select: none;
-}
 .slug-input {
-  font-family: var(--mono);
+  font-family: var(--sans);
+  font-weight: 500;
 }
 
 .dice-btn {
   width: 48px;
-  height: 100%;
-  align-self: stretch;
   background: var(--bg-card);
   border: none;
   border-left: 1px solid var(--border);
@@ -735,7 +746,7 @@ body {
   margin-bottom: 4px;
 }
 .hist-link {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--accent);
@@ -744,10 +755,10 @@ body {
 .hist-link:hover { text-decoration: underline; }
 .hist-clicks {
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-mute);
-  background: var(--bg-card);
-  padding: 2px 8px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--border);
+  padding: 4px 10px;
   border-radius: var(--r-full);
 }
 .hist-orig {
