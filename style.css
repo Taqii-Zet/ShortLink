@@ -286,29 +286,27 @@ body {
 }
 .field-clear:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
 
-/* Slug split */
+/* Slug split (stacked for long domains) */
 .slug-split {
   display: flex;
-  align-items: stretch;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
 }
 .slug-pre-box {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px dashed var(--border);
   border-radius: var(--r-md);
+  padding: 14px 16px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
 }
 .slug-pre {
   font-family: var(--sans);
   font-size: 0.85rem;
   color: var(--text-mute);
-  white-space: nowrap;
   user-select: none;
 }
 .slug-input-box {
-  flex: 1;
   display: flex;
   align-items: stretch;
   background: var(--bg-elev);
@@ -322,8 +320,10 @@ body {
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 .slug-input {
+  flex: 1;
   font-family: var(--sans);
   font-weight: 500;
+  width: 100%;
 }
 
 .dice-btn {
@@ -756,10 +756,11 @@ body {
 .hist-clicks {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--text);
-  background: var(--border);
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.15);
   padding: 4px 10px;
-  border-radius: var(--r-full);
+  border-radius: 6px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
 }
 .hist-orig {
   font-size: 0.85rem;
