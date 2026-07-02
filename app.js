@@ -312,6 +312,9 @@ function renderHistory(filter = '') {
         <button class="hbtn" title="Copy" onclick="copyHistItem('${esc(e.short)}',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
+        <button class="hbtn qr" title="QR Code" onclick="showQrModal('${esc(e.short)}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="21" x2="21" y2="21"/></svg>
+        </button>
         <button class="hbtn del" title="Delete" onclick="askDelete('${esc(e.slug)}')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
@@ -381,6 +384,60 @@ function clearAllLinks() {
 
 function closeModal() { document.getElementById('modal-bg').style.display = 'none'; }
 function handleModalBgClick(e) { if (e.target.id === 'modal-bg') closeModal(); }
+
+/* ── QR CODE ─────────────────────────────────────────── */
+let _qrCurrentUrl = null;
+
+function showQrModal(url) {
+  if (!url) {
+    showToast('error', 'Shorten a link first to generate its QR code.');
+    return;
+  }
+  _qrCurrentUrl = url;
+
+  const urlLabel = document.getElementById('qr-modal-url');
+  try { urlLabel.textContent = url.replace(/^https?:\/\//, ''); }
+  catch { urlLabel.textContent = url; }
+
+  const canvas = document.getElementById('qr-canvas');
+  const modalBg = document.getElementById('qr-modal-bg');
+  modalBg.style.display = 'flex';
+
+  if (typeof QRCode === 'undefined') {
+    showToast('error', 'QR code library failed to load.');
+    return;
+  }
+
+  QRCode.toCanvas(canvas, url, {
+    width: 220,
+    margin: 2,
+    color: { dark: '#0f1115', light: '#ffffff' },
+  }, function (error) {
+    if (error) {
+      console.error(error);
+      showToast('error', 'Failed to generate QR code.');
+    }
+  });
+}
+
+function closeQrModal() {
+  document.getElementById('qr-modal-bg').style.display = 'none';
+  _qrCurrentUrl = null;
+}
+
+function handleQrModalBgClick(e) { if (e.target.id === 'qr-modal-bg') closeQrModal(); }
+
+function downloadQr() {
+  const canvas = document.getElementById('qr-canvas');
+  if (!canvas || !_qrCurrentUrl) return;
+  const a = document.createElement('a');
+  a.download = `qrcode-${_qrCurrentUrl.split('=').pop() || 'shortlink'}.png`;
+  a.href = canvas.toDataURL('image/png');
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('ok', 'QR code downloaded.');
+}
 
 /* ── COPY ────────────────────────────────────────────── */
 function copyText(str) {
@@ -464,7 +521,7 @@ document.getElementById('long-url').addEventListener('input', function() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && ['long-url','custom-slug'].includes(e.target.id)) shortenURL();
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') { closeModal(); closeQrModal(); }
 });
 
 /* ── INIT ────────────────────────────────────────────── */

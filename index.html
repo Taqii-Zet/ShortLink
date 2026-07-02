@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/png" href="logo.png" />
+  <!-- QR Code generation library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -141,6 +143,10 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               <span>Copy</span>
             </button>
+            <button class="qr-btn" id="qr-btn" onclick="showQrModal(lastEntry ? lastEntry.short : '')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="21" x2="21" y2="21"/></svg>
+              <span>QR Code</span>
+            </button>
           </div>
         </div>
 
@@ -260,6 +266,27 @@
       <div class="modal-btns">
         <button class="mbtn mbtn-ghost" onclick="closeModal()">Cancel</button>
         <button class="mbtn mbtn-red" id="modal-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== QR CODE MODAL ===== -->
+  <div class="modal-bg" id="qr-modal-bg" style="display:none" onclick="handleQrModalBgClick(event)">
+    <div class="modal-box qr-modal-box">
+      <button class="qr-modal-close" onclick="closeQrModal()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="qr-modal-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="21" x2="21" y2="21"/></svg>
+      </div>
+      <h3>Scan to open</h3>
+      <div class="qr-canvas-wrap">
+        <canvas id="qr-canvas"></canvas>
+      </div>
+      <p class="qr-modal-url" id="qr-modal-url"></p>
+      <div class="modal-btns">
+        <button class="mbtn mbtn-ghost" onclick="closeQrModal()">Close</button>
+        <button class="mbtn mbtn-accent" onclick="downloadQr()">Download PNG</button>
       </div>
     </div>
   </div>

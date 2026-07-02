@@ -490,6 +490,7 @@ body {
   border: 1px solid var(--border);
   padding: 12px 16px;
   border-radius: var(--r-md);
+  flex-wrap: wrap;
 }
 .result-link-box {
   flex: 1;
@@ -534,6 +535,25 @@ body {
 }
 .copy-btn:hover { background: var(--border-hov); }
 .copy-btn.copied { background: var(--success); color: #fff; }
+
+/* QR trigger button next to Copy in the result card */
+.qr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.qr-btn:hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
 
 /* ── HERO STATS ────────────────────────────────────── */
 .hero-stats {
@@ -800,6 +820,7 @@ body {
 }
 .hbtn:hover { border-color: var(--text-mute); color: var(--text); }
 .hbtn.del:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+.hbtn.qr:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
 .hbtn.copied-flash { color: var(--success); border-color: var(--success); }
 
 /* Empty state */
@@ -920,6 +941,60 @@ body {
 .mbtn-ghost:hover { background: var(--border); }
 .mbtn-red { background: var(--danger); border: 1px solid transparent; color: #fff; }
 .mbtn-red:hover { background: #dc2626; }
+.mbtn-accent { background: var(--accent); border: 1px solid transparent; color: var(--bg); }
+.mbtn-accent:hover { background: var(--accent-hov); }
+
+/* ── QR MODAL ──────────────────────────────────────── */
+.qr-modal-box {
+  position: relative;
+  max-width: 340px;
+}
+.qr-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-mute);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.qr-modal-close:hover { color: var(--text); border-color: var(--border-hov); }
+.qr-modal-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+.qr-canvas-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: var(--r-md);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.qr-canvas-wrap canvas { display: block; width: 100%; max-width: 220px; height: auto; }
+.qr-modal-url {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text-mute);
+  margin-bottom: 24px;
+  word-break: break-all;
+  line-height: 1.5;
+}
 
 /* ── REDIRECT OVERLAY ──────────────────────────────── */
 .redirect-overlay {
