@@ -52,18 +52,6 @@ if (card) {
   });
 }
 
-/* ── REDIRECT ───────────────────────────────────────── */
-(function handleRedirect() {
-  const slug = decodeURIComponent(window.location.pathname.slice(1)).replace(/\/$/, '');
-  if (!slug) return; // root path, show the landing page normally
-
-  const entry = getLinks()[slug];
-  if (!entry) return; // unknown slug, just show the landing page as-is
-
-  bumpClick(slug);
-  window.location.replace(entry.original);
-})();
-
 /* ── SLUG VALIDATION ─────────────────────────────────── */
 const SLUG_RE = /^[a-zA-Z0-9_-]+$/;
 
