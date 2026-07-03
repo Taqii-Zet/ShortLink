@@ -529,3 +529,20 @@ document.addEventListener('keydown', e => {
 /* ── INIT ────────────────────────────────────────────── */
 renderHistory();
 updateStats();
+
+/* ── ACCORDION (FAQ & Legal) ─────────────────────────── */
+document.querySelectorAll('.accordion').forEach(acc => {
+  acc.querySelectorAll('.acc-trigger').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      const item = trigger.closest('.acc-item');
+      const isOpen = item.classList.contains('open');
+
+      // Nutup semua item lain dalam accordion yang sama
+      acc.querySelectorAll('.acc-item.open').forEach(el => {
+        if (el !== item) el.classList.remove('open');
+      });
+
+      item.classList.toggle('open', !isOpen);
+    });
+  });
+});
