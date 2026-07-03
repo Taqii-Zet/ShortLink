@@ -2,22 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <script>
-    (function () {
-      var slug = decodeURIComponent(location.pathname.slice(1)).replace(/\/$/, '');
-      if (!slug) return;
-      try {
-        var map   = JSON.parse(localStorage.getItem('taqi_links')) || {};
-        var entry = map[slug];
-        if (entry && entry.original) {
-          entry.clicks = (entry.clicks || 0) + 1;
-          map[slug] = entry;
-          localStorage.setItem('taqi_links', JSON.stringify(map));
-          location.replace(entry.original);
-        }
-      } catch (e) {}
-    })();
-  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShortLink — URL Shortener</title>
   <meta name="description" content="Paste a long URL, pick a custom slug, get a clean short link on s.taqi.qzz.io No sign-up, no tracking." />

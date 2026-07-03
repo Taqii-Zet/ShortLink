@@ -1,7 +1,7 @@
 /* =====================================================
    ShortLink — App Logic
-   Storage: localStorage
-   Redirect: /<slug> path
+   Storage: Upstash Redis via /api routes (shared across all users)
+   Redirect: handled server-side by middleware.js
    Domain: https://s.taqi.qzz.io
    ===================================================== */
 
@@ -11,36 +11,50 @@
 const CFG = {
   baseUrl:    'https://s.taqi.qzz.io',
   displayBase: 's.taqi.qzz.io',
-  storageKey: 'taqi_links',
-  reserved:   ['s','r','api','www','admin','app','login','signup','help'],
 };
 
 function buildShortUrl(slug)   { return `${CFG.baseUrl}/${encodeURIComponent(slug)}`; }
 function buildDisplayUrl(slug) { return `${CFG.displayBase}/${slug}`; }
 
-/* ── STORAGE ─────────────────────────────────────────── */
-function getLinks() {
-  try { return JSON.parse(localStorage.getItem(CFG.storageKey)) || {}; }
-  catch { return {}; }
+/* ── API HELPERS ───────────────────────────────────── */
+async function apiCreate(url, slug) {
+  const res = await fetch('/api/shorten', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, slug: slug || undefined }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+  return data.entry;
 }
-function saveLinks(map) { localStorage.setItem(CFG.storageKey, JSON.stringify(map)); }
 
-function addLink(slug, original) {
-  const map   = getLinks();
-  const entry = { slug, original, short: buildShortUrl(slug), display: buildDisplayUrl(slug), createdAt: Date.now(), clicks: 0 };
-  map[slug]   = entry;
-  saveLinks(map);
-  return entry;
+async function apiList() {
+  const res = await fetch('/api/links');
+  if (!res.ok) throw new Error('Failed to load links.');
+  const data = await res.json();
+  return data.links || [];
 }
-function removeLink(slug) { const m = getLinks(); delete m[slug]; saveLinks(m); }
-function nukeLinks()      { localStorage.removeItem(CFG.storageKey); }
-function bumpClick(slug)  {
-  const m = getLinks();
-  if (m[slug]) { m[slug].clicks = (m[slug].clicks || 0) + 1; saveLinks(m); }
+
+async function apiCheckSlug(slug) {
+  const res = await fetch(`/api/check?slug=${encodeURIComponent(slug)}`);
+  if (!res.ok) return { available: true };
+  return res.json();
 }
+
+async function apiDelete(slug) {
+  const res = await fetch(`/api/links?slug=${encodeURIComponent(slug)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete link.');
+}
+
+async function apiDeleteAll() {
+  const res = await fetch('/api/links?all=true', { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to clear links.');
+}
+
+/* ── LOCAL CACHE (avoids re-fetching on every search keystroke) ─ */
+let cachedLinks = [];
 
 /* ── INTERACTIVE CARD EFFECT ────────────────────────── */
-// Magnetic/glow effect that follows the mouse on the form card
 const card = document.getElementById('form-card');
 if (card) {
   card.addEventListener('mousemove', e => {
@@ -52,20 +66,7 @@ if (card) {
   });
 }
 
-/* ── SLUG VALIDATION ─────────────────────────────────── */
-const SLUG_RE = /^[a-zA-Z0-9_-]+$/;
-
-function validateSlug(slug) {
-  if (!slug) return { ok: true };
-  if (slug.length < 2)                   return { ok: false, msg: 'At least 2 characters required.' };
-  if (slug.length > 40)                  return { ok: false, msg: 'Maximum 40 characters.' };
-  if (!SLUG_RE.test(slug))               return { ok: false, msg: 'Use letters, numbers, - or _ only.' };
-  if (CFG.reserved.includes(slug.toLowerCase())) return { ok: false, msg: `"${slug}" is reserved.` };
-  if (getLinks()[slug])                  return { ok: false, msg: 'Already taken. Try another!' };
-  return { ok: true, msg: 'Awesome! It\'s available.' };
-}
-
-/* ── WORD LIST (for random slugs) ────────────────────── */
+/* ── WORD LIST (client-side suggestion only, server has final say) ── */
 const W = [
   'ace','arc','bay','bit','cave','cool','dawn','deep','echo','edge',
   'fast','flow','fuel','gem','haze','hook','hub','isle','jade','keen',
@@ -113,19 +114,42 @@ function updatePreview() {
   el.textContent = slug || 'my-link';
 }
 
+/* ── SLUG AVAILABILITY (debounced, hits the server) ──── */
+let _slugCheckTimer = null;
+
+function scheduleSlugCheck(slug) {
+  clearTimeout(_slugCheckTimer);
+  const el = document.getElementById('slug-status');
+
+  if (!slug) { el.textContent = ''; el.className = 'slug-status'; return; }
+
+  el.textContent = 'Checking...';
+  el.className   = 'slug-status';
+
+  _slugCheckTimer = setTimeout(async () => {
+    try {
+      const v = await apiCheckSlug(slug);
+      el.textContent = v.reason || '';
+      el.className   = `slug-status ${v.available ? 'ok' : 'err'}`;
+    } catch {
+      el.textContent = '';
+      el.className   = 'slug-status';
+    }
+  }, 400);
+}
+
 /* ── CORE: SHORTEN ──────────────────────────────────── */
 let lastEntry = null;
 
-function shortenURL() {
-  const urlEl   = document.getElementById('long-url');
-  const slugEl  = document.getElementById('custom-slug');
-  const btn     = document.getElementById('shorten-btn');
-  const rowEl   = urlEl.closest('.field-row');
+async function shortenURL() {
+  const urlEl  = document.getElementById('long-url');
+  const slugEl = document.getElementById('custom-slug');
+  const btn    = document.getElementById('shorten-btn');
+  const rowEl  = urlEl.closest('.field-row');
 
   let rawUrl = urlEl.value.trim();
   let slug   = slugEl.value.trim();
 
-  // Validate URL
   if (!rawUrl) {
     rowEl.classList.add('err'); shake(rowEl);
     showToast('error', 'Please enter a URL first.');
@@ -141,43 +165,36 @@ function shortenURL() {
     return;
   }
 
-  // Validate slug
-  if (slug) {
-    const v = validateSlug(slug);
-    if (!v.ok) { showToast('error', v.msg); return; }
-  } else {
-    let attempt = rndSlug();
-    let tries   = 0;
-    while (getLinks()[attempt] && tries++ < 20) attempt = rndSlug();
-    slug = attempt;
-  }
-
-  // Animate button
   btn.disabled = true;
   document.getElementById('btn-label').textContent = 'Generating...';
 
-  // Brief delay to feel like it's "processing"
-  setTimeout(() => {
-    const entry = addLink(slug, rawUrl);
-    lastEntry   = entry;
-
-    btn.disabled = false;
-    document.getElementById('btn-label').textContent = 'Shorten URL';
+  try {
+    const entry = await apiCreate(rawUrl, slug);
+    lastEntry = entry;
 
     showResult(entry);
-    updateStats();
-    renderHistory();
+    await refreshAll();
     showToast('ok', 'Link successfully created!');
-  }, 600);
+  } catch (err) {
+    showToast('error', err.message || 'Something went wrong.');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('btn-label').textContent = 'Shorten URL';
+  }
 }
 
 function showResult(entry) {
-  const wrap = document.getElementById('result-wrap');
+  const wrap   = document.getElementById('result-wrap');
   const linkEl = document.getElementById('result-link');
   const origEl = document.getElementById('result-orig');
   const cpBtn  = document.getElementById('copy-btn');
 
-  linkEl.href = entry.short;
+  const short   = buildShortUrl(entry.slug);
+  const display = buildDisplayUrl(entry.slug);
+  entry.short   = short;
+  entry.display = display;
+
+  linkEl.href = short;
   try { origEl.textContent = 'Redirects to: ' + new URL(entry.original).hostname; }
   catch { origEl.textContent = 'Redirects to: ' + entry.original.slice(0, 40) + '...'; }
 
@@ -185,14 +202,10 @@ function showResult(entry) {
   cpBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span>`;
 
   wrap.style.display = 'block';
-
-  // Auto scroll to result smoothly
-  setTimeout(() => {
-    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 100);
+  setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
 
   linkEl.textContent = '';
-  scrambleReveal(linkEl, entry.display, 700);
+  scrambleReveal(linkEl, display, 700);
 }
 
 function copyResult() {
@@ -227,12 +240,10 @@ function clearURL() {
 
 /* ── RANDOM SLUG ─────────────────────────────────────── */
 function generateRandom() {
-  let s = rndSlug();
-  let t = 0;
-  while (getLinks()[s] && t++ < 20) s = rndSlug();
+  const s = rndSlug();
   document.getElementById('custom-slug').value = s;
   updatePreview();
-  validateSlugInput();
+  scheduleSlugCheck(s);
 
   const btn = document.getElementById('dice-btn');
   btn.style.transition = 'transform 0.3s ease';
@@ -243,16 +254,15 @@ function generateRandom() {
 
 /* ── HISTORY ─────────────────────────────────────────── */
 function renderHistory(filter = '') {
-  const links   = getLinks();
-  const entries = Object.values(links).sort((a, b) => b.createdAt - a.createdAt);
-  const list    = document.getElementById('history-list');
-  const empty   = document.getElementById('history-empty');
-  const caBtn   = document.getElementById('clear-all-btn');
+  const entries = [...cachedLinks].sort((a, b) => b.createdAt - a.createdAt);
+  const list  = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+  const caBtn = document.getElementById('clear-all-btn');
 
   if (entries.length === 0) {
     list.innerHTML = '';
-    empty.style.display  = 'flex';
-    caBtn.style.display  = 'none';
+    empty.style.display = 'flex';
+    caBtn.style.display = 'none';
     return;
   }
 
@@ -272,22 +282,24 @@ function renderHistory(filter = '') {
     let initials = 'URL';
     try { initials = new URL(e.original).hostname.replace('www.', '').slice(0, 2).toUpperCase(); } catch {}
     const clicks = e.clicks || 0;
+    const short   = buildShortUrl(e.slug);
+    const display = buildDisplayUrl(e.slug);
     return `
     <div class="hist-item" id="hi-${e.slug}">
       <div class="hist-initials">${initials}</div>
       <div class="hist-info">
         <div class="hist-short-row">
-          <a class="hist-link" href="${esc(e.short)}" target="_blank" rel="noopener">${esc(e.display)}</a>
+          <a class="hist-link" href="${esc(short)}" target="_blank" rel="noopener">${esc(display)}</a>
           <span class="hist-clicks">${clicks} click${clicks !== 1 ? 's' : ''}</span>
         </div>
         <div class="hist-orig" title="${esc(e.original)}">${esc(e.original)}</div>
       </div>
       <span class="hist-date">${ago(e.createdAt)}</span>
       <div class="hist-actions">
-        <button class="hbtn" title="Copy" onclick="copyHistItem('${esc(e.short)}',this)">
+        <button class="hbtn" title="Copy" onclick="copyHistItem('${esc(short)}',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
-        <button class="hbtn qr" title="QR Code" onclick="showQrModal('${esc(e.short)}')">
+        <button class="hbtn qr" title="QR Code" onclick="showQrModal('${esc(short)}')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="21" x2="21" y2="21"/></svg>
         </button>
         <button class="hbtn del" title="Delete" onclick="askDelete('${esc(e.slug)}')">
@@ -305,9 +317,8 @@ function filterHistory() {
 
 /* ── STATS ───────────────────────────────────────────── */
 function updateStats() {
-  const entries = Object.values(getLinks());
-  tickNum(document.getElementById('stat-total'),  entries.length);
-  tickNum(document.getElementById('stat-clicks'), entries.reduce((s, e) => s + (e.clicks || 0), 0));
+  tickNum(document.getElementById('stat-total'),  cachedLinks.length);
+  tickNum(document.getElementById('stat-clicks'), cachedLinks.reduce((s, e) => s + (e.clicks || 0), 0));
 }
 
 function tickNum(el, target) {
@@ -325,33 +336,49 @@ function tickNum(el, target) {
   }, 20);
 }
 
+/* ── REFRESH (fetch from server + re-render) ─────────── */
+async function refreshAll() {
+  try {
+    cachedLinks = await apiList();
+  } catch {
+    showToast('error', 'Could not load links from the server.');
+    cachedLinks = [];
+  }
+  const q = document.getElementById('history-search').value.trim().toLowerCase();
+  renderHistory(q);
+  updateStats();
+}
+
 /* ── DELETE MODAL ────────────────────────────────────── */
 let _pendingSlug = null;
 
 function askDelete(slug) {
   _pendingSlug = slug;
   document.getElementById('modal-title').textContent = 'Remove this link?';
-  document.getElementById('modal-msg').textContent   = `The link s.taqi.qzz.io/${slug} will be permanently removed from your library.`;
+  document.getElementById('modal-msg').textContent   = `The link s.taqi.qzz.io/${slug} will be permanently removed for everyone.`;
   document.getElementById('modal-confirm').onclick   = doDelete;
   document.getElementById('modal-bg').style.display  = 'flex';
 }
 
-function doDelete() {
-  if (_pendingSlug) { removeLink(_pendingSlug); _pendingSlug = null; }
+async function doDelete() {
+  if (_pendingSlug) {
+    try { await apiDelete(_pendingSlug); }
+    catch { showToast('error', 'Failed to delete link.'); }
+    _pendingSlug = null;
+  }
   closeModal();
-  renderHistory();
-  updateStats();
+  await refreshAll();
   showToast('ok', 'Link removed successfully.');
 }
 
 function clearAllLinks() {
   document.getElementById('modal-title').textContent = 'Clear all links?';
-  document.getElementById('modal-msg').textContent   = 'All your saved links will be permanently deleted. This action cannot be undone.';
-  document.getElementById('modal-confirm').onclick   = () => {
-    nukeLinks();
+  document.getElementById('modal-msg').textContent   = 'All saved links will be permanently deleted for everyone. This action cannot be undone.';
+  document.getElementById('modal-confirm').onclick   = async () => {
+    try { await apiDeleteAll(); }
+    catch { showToast('error', 'Failed to clear links.'); }
     closeModal();
-    renderHistory();
-    updateStats();
+    await refreshAll();
     showToast('ok', 'All links have been cleared.');
   };
   document.getElementById('modal-bg').style.display = 'flex';
@@ -363,9 +390,6 @@ function handleModalBgClick(e) { if (e.target.id === 'modal-bg') closeModal(); }
 /* ── QR CODE ─────────────────────────────────────────── */
 let _qrCurrentUrl = null;
 
-// Generated as an <img>, not via a JS library — this only needs an image
-// request to succeed, which tends to work even when a page's CSP or an
-// extension blocks loading third-party <script> files.
 function qrImageUrl(url, sizePx) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${sizePx}x${sizePx}&margin=10&data=${encodeURIComponent(url)}`;
 }
@@ -381,17 +405,17 @@ function showQrModal(url) {
   try { urlLabel.textContent = url.replace(/^https?:\/\//, ''); }
   catch { urlLabel.textContent = url; }
 
-  const wrap   = document.getElementById('qr-canvas-wrap');
-  const img    = document.getElementById('qr-code-img');
+  const wrap    = document.getElementById('qr-canvas-wrap');
+  const img     = document.getElementById('qr-code-img');
   const modalBg = document.getElementById('qr-modal-bg');
 
   wrap.classList.add('loading');
   img.style.visibility = 'hidden';
   modalBg.style.display = 'flex';
 
-  img.crossOrigin = 'anonymous'; // lets the download button read the pixels back out
+  img.crossOrigin = 'anonymous';
   img.onload = () => {
-    if (_qrCurrentUrl !== url) return; // a newer link was opened while this was loading
+    if (_qrCurrentUrl !== url) return;
     wrap.classList.remove('loading');
     img.style.visibility = 'visible';
   };
@@ -433,8 +457,6 @@ function downloadQr() {
     document.body.removeChild(a);
     showToast('ok', 'QR code downloaded.');
   } catch (err) {
-    // Canvas got tainted (no CORS header on the image) — fall back to opening
-    // the image directly so the person can save it manually.
     console.error(err);
     window.open(img.src, '_blank');
     showToast('ok', 'Opened the QR code in a new tab — right-click (or long-press) it to save.');
@@ -504,16 +526,22 @@ function scrollToShorten() {
   setTimeout(() => document.getElementById('long-url').focus(), 500);
 }
 
+/* ── ACCORDION (FAQ & Legal) ─────────────────────────── */
+document.querySelectorAll('.accordion').forEach(acc => {
+  acc.querySelectorAll('.acc-trigger').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      const item = trigger.closest('.acc-item');
+      const isOpen = item.classList.contains('open');
+      acc.querySelectorAll('.acc-item.open').forEach(el => { if (el !== item) el.classList.remove('open'); });
+      item.classList.toggle('open', !isOpen);
+    });
+  });
+});
+
 /* ── EVENT LISTENERS ─────────────────────────────────── */
 document.getElementById('custom-slug').addEventListener('input', () => {
   const slug = document.getElementById('custom-slug').value.trim();
-  const el   = document.getElementById('slug-status');
-  if (!slug) { el.textContent = ''; el.className = 'slug-status'; }
-  else {
-    const v = validateSlug(slug);
-    el.textContent = v.ok ? (v.msg || '') : v.msg;
-    el.className   = `slug-status ${v.ok ? 'ok' : 'err'}`;
-  }
+  scheduleSlugCheck(slug);
   updatePreview();
 });
 
@@ -527,22 +555,4 @@ document.addEventListener('keydown', e => {
 });
 
 /* ── INIT ────────────────────────────────────────────── */
-renderHistory();
-updateStats();
-
-/* ── ACCORDION (FAQ & Legal) ─────────────────────────── */
-document.querySelectorAll('.accordion').forEach(acc => {
-  acc.querySelectorAll('.acc-trigger').forEach(trigger => {
-    trigger.addEventListener('click', () => {
-      const item = trigger.closest('.acc-item');
-      const isOpen = item.classList.contains('open');
-
-      // Nutup semua item lain dalam accordion yang sama
-      acc.querySelectorAll('.acc-item.open').forEach(el => {
-        if (el !== item) el.classList.remove('open');
-      });
-
-      item.classList.toggle('open', !isOpen);
-    });
-  });
-});
+refreshAll();
