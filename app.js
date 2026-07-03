@@ -61,16 +61,7 @@ if (card) {
   if (!entry) return; // unknown slug, just show the landing page as-is
 
   bumpClick(slug);
-
-  const overlay = document.getElementById('redirect-overlay');
-  const dest    = document.getElementById('redir-dest');
-  const manual  = document.getElementById('redir-manual');
-  overlay.style.display = 'flex';
-  try { dest.textContent = new URL(entry.original).hostname; }
-  catch { dest.textContent = entry.original.slice(0, 50); }
-  manual.href = entry.original;
-
-  setTimeout(() => { window.location.href = entry.original; }, 2000);
+  window.location.replace(entry.original);
 })();
 
 /* ── SLUG VALIDATION ─────────────────────────────────── */
