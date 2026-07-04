@@ -468,6 +468,36 @@ function closeQrModal() {
 function handleQrModalBgClick(e) { if (e.target.id === 'qr-modal-bg') closeQrModal(); }
 
 function downloadQr() {
+  async function copyQrImage() {
+    const img = document.getElementById('qr-code-img');
+    if (!_qrCurrentUrl || !img.complete || !img.naturalWidth) {
+      showToast('error', 'QR code is not ready yet.');
+      return;
+    }
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      showToast('error', 'Copying images isn\'t supported in this browser.');
+      return;
+    }
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width  = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Failed to generate image blob');
+
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showToast('ok', 'QR code copied to clipboard.');
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Could not copy the image. Try downloading instead.');
+    }
+  }
+  
   const img = document.getElementById('qr-code-img');
   if (!_qrCurrentUrl || !img.complete || !img.naturalWidth) {
     showToast('error', 'QR code is not ready yet.');
