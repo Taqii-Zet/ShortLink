@@ -1,22 +1,38 @@
 /* =====================================================
    ShortLink — App Logic
-   Storage: Upstash Redis via /api routes (shared across all users)
-   Redirect: handled server-side by middleware.js
-   Domain: https://s.taqi.qzz.io
+   Link data (redirect target)   : Redis via /api routes → shared, works for anyone
+   "My Links" history            : localStorage → private per browser
+   Click counts on history items : fetched live from server
    ===================================================== */
 
 'use strict';
 
 /* ── CONFIG ─────────────────────────────────────────── */
 const CFG = {
-  baseUrl:    'https://s.taqi.qzz.io',
+  baseUrl:     'https://s.taqi.qzz.io',
   displayBase: 's.taqi.qzz.io',
+  localKey:    'taqi_my_links',
 };
 
 function buildShortUrl(slug)   { return `${CFG.baseUrl}/${encodeURIComponent(slug)}`; }
 function buildDisplayUrl(slug) { return `${CFG.displayBase}/${slug}`; }
 
-/* ── API HELPERS ───────────────────────────────────── */
+/* ── LOCAL HISTORY (per-browser, private) ────────────── */
+function getLocalLinks() {
+  try { return JSON.parse(localStorage.getItem(CFG.localKey)) || {}; }
+  catch { return {}; }
+}
+function saveLocalLinks(map) { localStorage.setItem(CFG.localKey, JSON.stringify(map)); }
+
+function addLocalLink(entry) {
+  const map = getLocalLinks();
+  map[entry.slug] = { slug: entry.slug, original: entry.original, createdAt: entry.createdAt };
+  saveLocalLinks(map);
+}
+function removeLocalLink(slug) { const m = getLocalLinks(); delete m[slug]; saveLocalLinks(m); }
+function clearLocalLinks()     { localStorage.removeItem(CFG.localKey); }
+
+/* ── API HELPERS (talk to the shared server-side store) ─ */
 async function apiCreate(url, slug) {
   const res = await fetch('/api/shorten', {
     method: 'POST',
@@ -28,8 +44,9 @@ async function apiCreate(url, slug) {
   return data.entry;
 }
 
-async function apiList() {
-  const res = await fetch('/api/links');
+async function apiListBySlugs(slugs) {
+  if (!slugs.length) return [];
+  const res = await fetch(`/api/links?slugs=${encodeURIComponent(slugs.join(','))}`);
   if (!res.ok) throw new Error('Failed to load links.');
   const data = await res.json();
   return data.links || [];
@@ -46,12 +63,13 @@ async function apiDelete(slug) {
   if (!res.ok) throw new Error('Failed to delete link.');
 }
 
-async function apiDeleteAll() {
-  const res = await fetch('/api/links?all=true', { method: 'DELETE' });
+async function apiDeleteMany(slugs) {
+  if (!slugs.length) return;
+  const res = await fetch(`/api/links?slugs=${encodeURIComponent(slugs.join(','))}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to clear links.');
 }
 
-/* ── LOCAL CACHE (avoids re-fetching on every search keystroke) ─ */
+/* ── LOCAL CACHE FOR RENDERING (merged local + live click counts) ── */
 let cachedLinks = [];
 
 /* ── INTERACTIVE CARD EFFECT ────────────────────────── */
@@ -172,6 +190,8 @@ async function shortenURL() {
     const entry = await apiCreate(rawUrl, slug);
     lastEntry = entry;
 
+    addLocalLink(entry); // save into THIS browser's private history only
+
     showResult(entry);
     await refreshAll();
     showToast('ok', 'Link successfully created!');
@@ -252,7 +272,7 @@ function generateRandom() {
   setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 400);
 }
 
-/* ── HISTORY ─────────────────────────────────────────── */
+/* ── HISTORY (rendered from cachedLinks, sourced from local history) ── */
 function renderHistory(filter = '') {
   const entries = [...cachedLinks].sort((a, b) => b.createdAt - a.createdAt);
   const list  = document.getElementById('history-list');
@@ -281,7 +301,7 @@ function renderHistory(filter = '') {
   list.innerHTML = filtered.map(e => {
     let initials = 'URL';
     try { initials = new URL(e.original).hostname.replace('www.', '').slice(0, 2).toUpperCase(); } catch {}
-    const clicks = e.clicks || 0;
+    const clicks  = e.clicks || 0;
     const short   = buildShortUrl(e.slug);
     const display = buildDisplayUrl(e.slug);
     return `
@@ -315,7 +335,7 @@ function filterHistory() {
   renderHistory(q);
 }
 
-/* ── STATS ───────────────────────────────────────────── */
+/* ── STATS (based on THIS browser's own history) ─────── */
 function updateStats() {
   tickNum(document.getElementById('stat-total'),  cachedLinks.length);
   tickNum(document.getElementById('stat-clicks'), cachedLinks.reduce((s, e) => s + (e.clicks || 0), 0));
@@ -336,14 +356,32 @@ function tickNum(el, target) {
   }, 20);
 }
 
-/* ── REFRESH (fetch from server + re-render) ─────────── */
+/* ── REFRESH: read local slugs, pull live click counts from server ── */
 async function refreshAll() {
-  try {
-    cachedLinks = await apiList();
-  } catch {
-    showToast('error', 'Could not load links from the server.');
+  const localMap = getLocalLinks();
+  const slugs    = Object.keys(localMap);
+
+  if (!slugs.length) {
     cachedLinks = [];
+  } else {
+    try {
+      const serverEntries = await apiListBySlugs(slugs);
+      const bySlug = Object.fromEntries(serverEntries.map(e => [e.slug, e]));
+
+      cachedLinks = slugs.filter(s => bySlug[s]).map(s => bySlug[s]);
+
+      // If a link was deleted server-side (e.g. from another tab), drop it locally too
+      if (cachedLinks.length !== slugs.length) {
+        const prunedMap = {};
+        cachedLinks.forEach(e => { prunedMap[e.slug] = localMap[e.slug]; });
+        saveLocalLinks(prunedMap);
+      }
+    } catch {
+      showToast('error', 'Could not refresh link stats.');
+      cachedLinks = slugs.map(s => ({ ...localMap[s], clicks: 0 }));
+    }
   }
+
   const q = document.getElementById('history-search').value.trim().toLowerCase();
   renderHistory(q);
   updateStats();
@@ -355,7 +393,7 @@ let _pendingSlug = null;
 function askDelete(slug) {
   _pendingSlug = slug;
   document.getElementById('modal-title').textContent = 'Remove this link?';
-  document.getElementById('modal-msg').textContent   = `The link s.taqi.qzz.io/${slug} will be permanently removed for everyone.`;
+  document.getElementById('modal-msg').textContent   = `The link s.taqi.qzz.io/${slug} will be permanently deleted and will stop working for anyone who has it.`;
   document.getElementById('modal-confirm').onclick   = doDelete;
   document.getElementById('modal-bg').style.display  = 'flex';
 }
@@ -364,6 +402,7 @@ async function doDelete() {
   if (_pendingSlug) {
     try { await apiDelete(_pendingSlug); }
     catch { showToast('error', 'Failed to delete link.'); }
+    removeLocalLink(_pendingSlug);
     _pendingSlug = null;
   }
   closeModal();
@@ -372,14 +411,16 @@ async function doDelete() {
 }
 
 function clearAllLinks() {
-  document.getElementById('modal-title').textContent = 'Clear all links?';
-  document.getElementById('modal-msg').textContent   = 'All saved links will be permanently deleted for everyone. This action cannot be undone.';
+  document.getElementById('modal-title').textContent = 'Clear all your links?';
+  document.getElementById('modal-msg').textContent   = 'All links in your history will be permanently deleted and will stop working for anyone who has them. This action cannot be undone.';
   document.getElementById('modal-confirm').onclick   = async () => {
-    try { await apiDeleteAll(); }
+    const slugs = Object.keys(getLocalLinks());
+    try { await apiDeleteMany(slugs); }
     catch { showToast('error', 'Failed to clear links.'); }
+    clearLocalLinks();
     closeModal();
     await refreshAll();
-    showToast('ok', 'All links have been cleared.');
+    showToast('ok', 'All your links have been cleared.');
   };
   document.getElementById('modal-bg').style.display = 'flex';
 }
