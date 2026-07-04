@@ -1008,12 +1008,6 @@ body {
   word-break: break-all;
   line-height: 1.5;
 }
-.modal-btns-col {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.mbtn-full { width: 100%; }
 
 /* ── REDIRECT OVERLAY ──────────────────────────────── */
 .redirect-overlay {
