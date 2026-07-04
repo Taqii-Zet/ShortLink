@@ -375,6 +375,24 @@
     </div>
   </div>
 
+  <!-- ===== EDIT MODAL ===== -->
+  <div class="modal-bg" id="edit-modal-bg" style="display:none" onclick="handleEditModalBgClick(event)">
+    <div class="modal-box">
+      <div class="modal-icon edit-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <h3>Edit destination</h3>
+      <p id="edit-modal-slug-label" class="edit-modal-label"></p>
+      <div style="text-align:left; margin-bottom: 24px;">
+        <input type="url" id="edit-url-input" class="edit-url-input" placeholder="https://new-destination.com" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="modal-btns">
+        <button class="mbtn mbtn-ghost" onclick="closeEditModal()">Cancel</button>
+        <button class="mbtn mbtn-accent" id="edit-modal-save" onclick="doEdit()">Save changes</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== QR CODE MODAL ===== -->
   <div class="modal-bg" id="qr-modal-bg" style="display:none" onclick="handleQrModalBgClick(event)">
     <div class="modal-box qr-modal-box">

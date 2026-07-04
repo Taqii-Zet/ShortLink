@@ -1214,3 +1214,35 @@ body {
 @media (max-width: 480px) {
   .footer-links { order: 3; }
 }
+
+/* ── EDIT MODAL ────────────────────────────────────── */
+.modal-icon.edit-icon {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.edit-modal-label {
+  font-family: var(--mono);
+  color: var(--text-mute) !important;
+  margin-bottom: 16px !important;
+  font-size: 0.85rem;
+}
+
+.edit-url-input {
+  width: 100%;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s;
+}
+.edit-url-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.hbtn.edit:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }

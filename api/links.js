@@ -20,6 +20,26 @@ export default async function handler(req, res) {
     return res.status(200).json({ links });
   }
 
+  if (req.method === 'PATCH') {
+    const { slug, url } = req.body || {};
+    if (!slug) return res.status(400).json({ error: 'slug is required' });
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL is required' });
+
+    let newUrl = url.trim();
+    if (!/^https?:\/\//i.test(newUrl)) newUrl = 'https://' + newUrl;
+    try { new URL(newUrl); }
+    catch { return res.status(400).json({ error: "That doesn't look like a valid URL." }); }
+
+    const existing = await redis.get(`link:${slug}`);
+    if (!existing) return res.status(404).json({ error: 'Link not found.' });
+
+    const updated = { ...existing, original: newUrl };
+    await redis.set(`link:${slug}`, updated);
+
+    const clicks = await redis.get(`clicks:${slug}`);
+    return res.status(200).json({ entry: { ...updated, clicks: Number(clicks) || 0 } });
+  }
+
   if (req.method === 'DELETE') {
     const raw = String(req.query.slugs || req.query.slug || '').trim();
     if (!raw) return res.status(400).json({ error: 'slug(s) required' });

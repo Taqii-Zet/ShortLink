@@ -69,6 +69,17 @@ async function apiDeleteMany(slugs) {
   if (!res.ok) throw new Error('Failed to clear links.');
 }
 
+async function apiUpdate(slug, url) {
+  const res = await fetch('/api/links', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug, url }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to update link.');
+  return data.entry;
+}
+
 /* ── LOCAL CACHE FOR RENDERING (merged local + live click counts) ── */
 let cachedLinks = [];
 
@@ -308,6 +319,9 @@ function renderHistory(filter = '') {
       </div>
       <span class="hist-date">${ago(e.createdAt)}</span>
       <div class="hist-actions">
+        <button class="hbtn edit" title="Edit destination" onclick="askEdit('${esc(e.slug)}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
         <button class="hbtn" title="Copy" onclick="copyHistItem('${esc(short)}',this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
@@ -419,6 +433,53 @@ function clearAllLinks() {
 
 function closeModal() { document.getElementById('modal-bg').style.display = 'none'; }
 function handleModalBgClick(e) { if (e.target.id === 'modal-bg') closeModal(); }
+
+/* ── EDIT MODAL ──────────────────────────────────────── */
+let _editingSlug = null;
+
+function askEdit(slug) {
+  const entry = cachedLinks.find(e => e.slug === slug);
+  if (!entry) return;
+
+  _editingSlug = slug;
+  document.getElementById('edit-modal-slug-label').textContent = buildDisplayUrl(slug);
+  document.getElementById('edit-url-input').value = entry.original;
+  document.getElementById('edit-modal-bg').style.display = 'flex';
+  setTimeout(() => document.getElementById('edit-url-input').focus(), 50);
+}
+
+async function doEdit() {
+  const input = document.getElementById('edit-url-input');
+  const btn   = document.getElementById('edit-modal-save');
+  let newUrl  = input.value.trim();
+
+  if (!newUrl) { showToast('error', 'Please enter a URL.'); return; }
+  if (!/^https?:\/\//i.test(newUrl)) newUrl = 'https://' + newUrl;
+  try { new URL(newUrl); }
+  catch { showToast('error', "That doesn't look like a valid URL."); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    await apiUpdate(_editingSlug, newUrl);
+    closeEditModal();
+    await refreshAll();
+    showToast('ok', 'Destination updated successfully.');
+  } catch (err) {
+    showToast('error', err.message || 'Failed to update link.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save changes';
+  }
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal-bg').style.display = 'none';
+  _editingSlug = null;
+}
+
+function handleEditModalBgClick(e) { if (e.target.id === 'edit-modal-bg') closeEditModal(); }
 
 /* ── QR CODE ─────────────────────────────────────────── */
 let _qrCurrentUrl = null;
@@ -584,7 +645,8 @@ document.getElementById('long-url').addEventListener('input', function() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && ['long-url','custom-slug'].includes(e.target.id)) shortenURL();
-  if (e.key === 'Escape') { closeModal(); closeQrModal(); }
+  if (e.key === 'Enter' && e.target.id === 'edit-url-input') doEdit();
+  if (e.key === 'Escape') { closeModal(); closeQrModal(); closeEditModal(); }
 });
 
 /* ── INIT ────────────────────────────────────────────── */
