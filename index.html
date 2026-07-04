@@ -109,6 +109,18 @@
           <div class="slug-status" id="slug-status"></div>
         </div>
 
+        <!-- Expiration -->
+        <div class="field" id="field-expiry">
+          <label class="field-label">Expiration <span class="field-label-dim">(optional)</span></label>
+          <div class="expiry-options" id="expiry-options">
+            <button type="button" class="expiry-opt active" data-value="never">Never</button>
+            <button type="button" class="expiry-opt" data-value="7d">7 days</button>
+            <button type="button" class="expiry-opt" data-value="30d">30 days</button>
+            <button type="button" class="expiry-opt" data-value="custom">Custom date</button>
+          </div>
+          <input type="date" id="expiry-custom-date" class="field-input expiry-date-input" style="display:none" />
+        </div>
+
         <!-- Live preview -->
         <div class="live-preview" id="live-preview">
           <div class="lp-pulse"></div>

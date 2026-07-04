@@ -38,9 +38,27 @@ export default async function handler(req, res) {
     slug = attempt;
   }
 
-  const entry = { slug, original: url, createdAt: Date.now() };
-  await redis.set(`link:${slug}`, entry);
+  let expiresAt = null;
+  let ttlSeconds = null;
+  const rawExpiresAt = req.body?.expiresAt;
+
+  if (rawExpiresAt) {
+    const ts = Number(rawExpiresAt);
+    if (!Number.isFinite(ts) || ts <= Date.now()) {
+      return res.status(400).json({ error: 'Expiration date must be in the future.' });
+    }
+    expiresAt  = ts;
+    ttlSeconds = Math.ceil((ts - Date.now()) / 1000);
+  }
+
+  const entry = { slug, original: url, createdAt: Date.now(), expiresAt };
+
+  if (ttlSeconds) {
+    await redis.set(`link:${slug}`, entry, { ex: ttlSeconds });
+    await redis.set(`clicks:${slug}`, 0, { ex: ttlSeconds });
+  } else {
+    await redis.set(`link:${slug}`, entry);
+  }
   await redis.zadd('links:index', { score: entry.createdAt, member: slug });
 
   return res.status(200).json({ entry: { ...entry, clicks: 0 } });
-}

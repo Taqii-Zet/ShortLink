@@ -26,18 +26,18 @@ function saveLocalLinks(map) { localStorage.setItem(CFG.localKey, JSON.stringify
 
 function addLocalLink(entry) {
   const map = getLocalLinks();
-  map[entry.slug] = { slug: entry.slug, original: entry.original, createdAt: entry.createdAt };
+  map[entry.slug] = { slug: entry.slug, original: entry.original, createdAt: entry.createdAt, expiresAt: entry.expiresAt || null };
   saveLocalLinks(map);
 }
 function removeLocalLink(slug) { const m = getLocalLinks(); delete m[slug]; saveLocalLinks(m); }
 function clearLocalLinks()     { localStorage.removeItem(CFG.localKey); }
 
 /* ── API HELPERS (talk to the shared server-side store) ─ */
-async function apiCreate(url, slug) {
+async function apiCreate(url, slug, expiresAt) {
   const res = await fetch('/api/shorten', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, slug: slug || undefined }),
+    body: JSON.stringify({ url, slug: slug || undefined, expiresAt: expiresAt || undefined }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Something went wrong.');
@@ -135,6 +135,42 @@ function updatePreview() {
   el.textContent = slug || 'my-link';
 }
 
+/* ── EXPIRY SELECTOR ──────────────────────────────────── */
+function getSelectedExpiry() {
+  const active = document.querySelector('.expiry-opt.active');
+  const value  = active ? active.dataset.value : 'never';
+
+  if (value === 'never') return null;
+  if (value === '7d')    return Date.now() + 7  * 24 * 60 * 60 * 1000;
+  if (value === '30d')   return Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+  if (value === 'custom') {
+    const dateEl = document.getElementById('expiry-custom-date');
+    if (!dateEl.value) return null;
+    const ts = new Date(dateEl.value + 'T23:59:59').getTime();
+    return Number.isFinite(ts) ? ts : null;
+  }
+  return null;
+}
+
+function resetExpirySelector() {
+  document.querySelectorAll('.expiry-opt').forEach(b => b.classList.remove('active'));
+  document.querySelector('.expiry-opt[data-value="never"]').classList.add('active');
+  document.getElementById('expiry-custom-date').style.display = 'none';
+  document.getElementById('expiry-custom-date').value = '';
+}
+
+function expiryLabel(expiresAt) {
+  if (!expiresAt) return null;
+  const diff = expiresAt - Date.now();
+  if (diff <= 0) return 'Expired';
+  const days = Math.ceil(diff / 86400000);
+  if (days <= 1) return 'Expires today';
+  if (days < 30) return `Expires in ${days}d`;
+  const d = new Date(expiresAt);
+  return `Expires ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+}
+
 /* ── SLUG AVAILABILITY (debounced, hits the server) ──── */
 let _slugCheckTimer = null;
 
@@ -189,8 +225,10 @@ async function shortenURL() {
   btn.disabled = true;
   document.getElementById('btn-label').textContent = 'Generating...';
 
+  const expiresAt = getSelectedExpiry();
+
   try {
-    const entry = await apiCreate(rawUrl, slug);
+    const entry = await apiCreate(rawUrl, slug, expiresAt);
     lastEntry = entry;
 
     addLocalLink(entry); // save into THIS browser's private history only
@@ -220,6 +258,17 @@ function showResult(entry) {
   linkEl.href = short;
   try { origEl.textContent = 'Redirects to: ' + new URL(entry.original).hostname; }
   catch { origEl.textContent = 'Redirects to: ' + entry.original.slice(0, 40) + '...'; }
+
+  let expiryEl = document.getElementById('result-expiry');
+  if (!expiryEl) {
+    expiryEl = document.createElement('div');
+    expiryEl.id = 'result-expiry';
+    expiryEl.className = 'result-expiry';
+    origEl.insertAdjacentElement('afterend', expiryEl);
+  }
+  const label = expiryLabel(entry.expiresAt);
+  expiryEl.textContent = label ? `⏱ ${label}` : '';
+  expiryEl.style.display = label ? 'block' : 'none';
 
   cpBtn.classList.remove('copied');
   cpBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span>`;
@@ -251,6 +300,7 @@ function shortenAnother() {
   document.getElementById('slug-status').className   = 'slug-status';
   document.getElementById('clear-btn').style.display = 'none';
   document.getElementById('lp-slug').textContent = 'my-link';
+  resetExpirySelector();
   lastEntry = null;
   document.getElementById('long-url').focus();
 }
@@ -307,6 +357,7 @@ function renderHistory(filter = '') {
     const clicks  = e.clicks || 0;
     const short   = buildShortUrl(e.slug);
     const display = buildDisplayUrl(e.slug);
+    const expLabel = expiryLabel(e.expiresAt);
     return `
     <div class="hist-item" id="hi-${e.slug}">
       <div class="hist-initials">${initials}</div>
@@ -314,6 +365,7 @@ function renderHistory(filter = '') {
         <div class="hist-short-row">
           <a class="hist-link" href="${esc(short)}" target="_blank" rel="noopener">${esc(display)}</a>
           <span class="hist-clicks">${clicks} click${clicks !== 1 ? 's' : ''}</span>
+          ${expLabel ? `<span class="hist-expiry">⏱ ${esc(expLabel)}</span>` : ''}
         </div>
         <div class="hist-orig" title="${esc(e.original)}">${esc(e.original)}</div>
       </div>
@@ -647,6 +699,23 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && ['long-url','custom-slug'].includes(e.target.id)) shortenURL();
   if (e.key === 'Enter' && e.target.id === 'edit-url-input') doEdit();
   if (e.key === 'Escape') { closeModal(); closeQrModal(); closeEditModal(); }
+});
+
+document.querySelectorAll('.expiry-opt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.expiry-opt').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const dateEl = document.getElementById('expiry-custom-date');
+    if (btn.dataset.value === 'custom') {
+      dateEl.style.display = 'block';
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      dateEl.min = tomorrow;
+      dateEl.focus();
+    } else {
+      dateEl.style.display = 'none';
+    }
+  });
 });
 
 /* ── INIT ────────────────────────────────────────────── */

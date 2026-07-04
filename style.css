@@ -1246,3 +1246,49 @@ body {
 }
 
 .hbtn.edit:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+/* ── EXPIRATION OPTIONS ────────────────────────────── */
+.expiry-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.expiry-opt {
+  padding: 8px 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  color: var(--text-mute);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.expiry-opt:hover { border-color: var(--border-hov); color: var(--text); }
+.expiry-opt.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.expiry-date-input {
+  margin-top: 10px;
+  color-scheme: dark;
+}
+
+.hist-expiry {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.result-expiry {
+  font-size: 0.8rem;
+  color: #f59e0b;
+  margin-top: 2px;
+}
