@@ -3,13 +3,15 @@ import { redis } from '../lib/redis.js';
 const RESERVED = ['s', 'r', 'api', 'www', 'admin', 'app', 'login', 'signup', 'help'];
 const SLUG_RE  = /^[a-zA-Z0-9_-]+$/;
 
-const W = ['ace','arc','bay','bit','cave','cool','dawn','deep','echo','edge','fast','flow','fuel','gem','haze','hook','hub','isle','jade','keen','kite','lake','lane','leaf','link','loop','lush','maze','mesa','mint','mist','moon','moss','nest','node','oak','page','path','peak','pine','pipe','port','puma','quad','rail','reef','rise','road','rock','root','rust','sail','salt','sand','seed','skip','slim','slab','snap','soft','solo','span','star','stem','step','surf','swift','task','tide','tilt','trek','true','turf','twin','vine','void','wade','wave','wild','wire','wit','wolf','yard','yoke','zeal','zinc','zone'];
+const SLUG_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const SLUG_LEN   = 5;
 
 function randomSlug() {
-  const a = W[Math.floor(Math.random() * W.length)];
-  const b = W[Math.floor(Math.random() * W.length)];
-  const n = Math.floor(Math.random() * 99) + 1;
-  return `${a}-${b}-${n}`;
+  let s = '';
+  for (let i = 0; i < SLUG_LEN; i++) {
+    s += SLUG_CHARS[Math.floor(Math.random() * SLUG_CHARS.length)];
+  }
+  return s;
 }
 
 export default async function handler(req, res) {
