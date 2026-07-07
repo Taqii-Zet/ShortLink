@@ -156,7 +156,7 @@ function getSelectedExpiry() {
 function resetExpirySelector() {
   document.querySelectorAll('.expiry-opt').forEach(b => b.classList.remove('active'));
   document.querySelector('.expiry-opt[data-value="never"]').classList.add('active');
-  document.getElementById('expiry-custom-date').style.display = 'none';
+  document.getElementById('expiry-custom-date').classList.remove('show');
   document.getElementById('expiry-custom-date').value = '';
 }
 
@@ -718,12 +718,12 @@ document.querySelectorAll('.expiry-opt').forEach(btn => {
 
     const dateEl = document.getElementById('expiry-custom-date');
     if (btn.dataset.value === 'custom') {
-      dateEl.style.display = 'block';
       const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
       dateEl.min = tomorrow;
-      dateEl.focus();
+      dateEl.classList.add('show');
+      setTimeout(() => dateEl.focus(), 200);
     } else {
-      dateEl.style.display = 'none';
+      dateEl.classList.remove('show');
     }
   });
 });
