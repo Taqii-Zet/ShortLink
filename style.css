@@ -1453,3 +1453,20 @@ body {
   60%    { transform: translateX(-4px); }
   80%    { transform: translateX(4px); }
 }
+
+/* ── MODAL CLOSE ANIMATION ─────────────────────────── */
+.modal-bg.closing {
+  animation: modal-bg-out 0.28s var(--ease-out) forwards;
+}
+.modal-bg.closing .modal-box {
+  animation: modal-box-out 0.28s var(--ease-out) forwards;
+}
+
+@keyframes modal-bg-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes modal-box-out {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 0; transform: scale(0.92) translateY(10px); }
+}

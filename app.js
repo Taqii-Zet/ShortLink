@@ -483,7 +483,17 @@ function clearAllLinks() {
   document.getElementById('modal-bg').style.display = 'flex';
 }
 
-function closeModal() { document.getElementById('modal-bg').style.display = 'none'; }
+function closeModalAnimated(id) {
+  const el = document.getElementById(id);
+  if (!el || el.style.display === 'none') return;
+  el.classList.add('closing');
+  setTimeout(() => {
+    el.style.display = 'none';
+    el.classList.remove('closing');
+  }, 280);
+}
+
+function closeModal() { closeModalAnimated('modal-bg'); }
 function handleModalBgClick(e) { if (e.target.id === 'modal-bg') closeModal(); }
 
 /* ── EDIT MODAL ──────────────────────────────────────── */
@@ -527,7 +537,7 @@ async function doEdit() {
 }
 
 function closeEditModal() {
-  document.getElementById('edit-modal-bg').style.display = 'none';
+  closeModalAnimated('edit-modal-bg');
   _editingSlug = null;
 }
 
@@ -574,7 +584,7 @@ function showQrModal(url) {
 }
 
 function closeQrModal() {
-  document.getElementById('qr-modal-bg').style.display = 'none';
+  closeModalAnimated('qr-modal-bg');
   _qrCurrentUrl = null;
 }
 
