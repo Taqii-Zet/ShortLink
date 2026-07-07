@@ -45,6 +45,17 @@
         <a href="#history-section" class="nav-a">My Links</a>
         <a href="#faq-section" class="nav-a">FAQ</a>
       </div>
+
+      <button class="nav-burger" id="nav-burger" onclick="toggleMobileNav()" aria-label="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+
+      <div class="nav-dropdown" id="nav-dropdown">
+        <a href="#shorten-section" class="nav-dropdown-a" onclick="closeMobileNav()">Shorten</a>
+        <a href="#features-section" class="nav-dropdown-a" onclick="closeMobileNav()">Features</a>
+        <a href="#history-section" class="nav-dropdown-a" onclick="closeMobileNav()">My Links</a>
+        <a href="#faq-section" class="nav-dropdown-a" onclick="closeMobileNav()">FAQ</a>
+      </div>
     </div>
   </nav>
 

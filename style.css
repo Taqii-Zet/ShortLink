@@ -1292,3 +1292,108 @@ body {
   color: #f59e0b;
   margin-top: 2px;
 }
+
+/* ── MOBILE NAV BURGER + DROPDOWN ─────────────────────── */
+.nav-burger {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.nav-burger svg { transition: transform 0.2s ease; }
+.nav-burger.open svg { transform: rotate(90deg); }
+
+.nav-dropdown {
+  display: none;
+  position: absolute;
+  top: 64px;
+  right: 16px;
+  left: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 60;
+}
+.nav-dropdown.open {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.nav-dropdown-a {
+  color: var(--text-mute);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 12px 14px;
+  border-radius: 8px;
+  transition: all 0.15s;
+}
+.nav-dropdown-a:hover, .nav-dropdown-a:active {
+  color: var(--text);
+  background: var(--bg-elev);
+}
+
+@media (max-width: 480px) {
+  .nav-links  { display: none; }
+  .nav-burger { display: flex; }
+}
+
+/* ── HERO STATS: keep aligned side-by-side on mobile ──── */
+@media (max-width: 480px) {
+  .hero-stats {
+    flex-direction: row;
+    justify-content: center;
+    gap: 20px;
+  }
+  .hstat-sep { display: block; }
+  .hstat { flex: 1; justify-content: center; max-width: 160px; }
+}
+
+/* ── HISTORY ITEM: stack cleanly on mobile ────────────── */
+@media (max-width: 640px) {
+  .hist-item {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 10px;
+  }
+  .hist-initials { order: 1; }
+  .hist-info {
+    order: 2;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: calc(100% - 56px);
+  }
+  .hist-short-row { flex-wrap: wrap; row-gap: 6px; }
+  .hist-date {
+    order: 3;
+    width: 100%;
+    padding-left: 56px;
+    margin-top: -6px;
+  }
+  .hist-actions {
+    order: 4;
+    width: 100%;
+    padding-left: 56px;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 380px) {
+  .hist-actions .hbtn { width: 32px; height: 32px; }
+}

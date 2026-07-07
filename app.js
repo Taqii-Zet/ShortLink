@@ -720,3 +720,20 @@ document.querySelectorAll('.expiry-opt').forEach(btn => {
 
 /* ── INIT ────────────────────────────────────────────── */
 refreshAll();
+
+/* ── MOBILE NAV DROPDOWN ──────────────────────────────── */
+function toggleMobileNav() {
+  document.getElementById('nav-dropdown').classList.toggle('open');
+  document.getElementById('nav-burger').classList.toggle('open');
+}
+function closeMobileNav() {
+  document.getElementById('nav-dropdown').classList.remove('open');
+  document.getElementById('nav-burger').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  const dropdown = document.getElementById('nav-dropdown');
+  const burger   = document.getElementById('nav-burger');
+  if (dropdown.classList.contains('open') && !dropdown.contains(e.target) && !burger.contains(e.target)) {
+    closeMobileNav();
+  }
+});
