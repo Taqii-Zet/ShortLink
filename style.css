@@ -211,7 +211,7 @@ body {
 .nav-dropdown.open {
   opacity: 1;
   transform: scale(1) translateY(0);
-  filter: blur(20);
+  filter: blur(0);
   pointer-events: auto;
   visibility: visible;
   transition:
