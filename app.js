@@ -26,18 +26,24 @@ function saveLocalLinks(map) { localStorage.setItem(CFG.localKey, JSON.stringify
 
 function addLocalLink(entry) {
   const map = getLocalLinks();
-  map[entry.slug] = { slug: entry.slug, original: entry.original, createdAt: entry.createdAt, expiresAt: entry.expiresAt || null };
+  map[entry.slug] = {
+    slug: entry.slug,
+    original: entry.original,
+    createdAt: entry.createdAt,
+    expiresAt: entry.expiresAt || null,
+    protected: !!entry.protected,
+  };
   saveLocalLinks(map);
 }
 function removeLocalLink(slug) { const m = getLocalLinks(); delete m[slug]; saveLocalLinks(m); }
 function clearLocalLinks()     { localStorage.removeItem(CFG.localKey); }
 
 /* ── API HELPERS (talk to the shared server-side store) ─ */
-async function apiCreate(url, slug, expiresAt) {
+async function apiCreate(url, slug, expiresAt, password) {
   const res = await fetch('/api/shorten', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, slug: slug || undefined, expiresAt: expiresAt || undefined }),
+    body: JSON.stringify({ url, slug: slug || undefined, expiresAt: expiresAt || undefined, password: password || undefined }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Something went wrong.');
@@ -160,6 +166,27 @@ function resetExpirySelector() {
   document.getElementById('expiry-custom-date').value = '';
 }
 
+/* ── PASSWORD PROTECTION TOGGLE ──────────────────────── */
+function togglePasswordProtection() {
+  const toggle = document.getElementById('pw-toggle');
+  const row    = document.getElementById('pw-input-row');
+  const label  = document.getElementById('pw-toggle-label');
+  const isOn   = toggle.classList.toggle('on');
+  toggle.setAttribute('aria-checked', isOn ? 'true' : 'false');
+  row.classList.toggle('show', isOn);
+  label.textContent = isOn ? 'A password will be required to open this link' : 'Anyone with the link can open it';
+  if (isOn) setTimeout(() => document.getElementById('link-password').focus(), 200);
+  else document.getElementById('link-password').value = '';
+}
+
+function resetPasswordToggle() {
+  document.getElementById('pw-toggle').classList.remove('on');
+  document.getElementById('pw-toggle').setAttribute('aria-checked', 'false');
+  document.getElementById('pw-input-row').classList.remove('show');
+  document.getElementById('pw-toggle-label').textContent = 'Anyone with the link can open it';
+  document.getElementById('link-password').value = '';
+}
+
 function expiryLabel(expiresAt) {
   if (!expiresAt) return null;
   const diff = expiresAt - Date.now();
@@ -226,9 +253,16 @@ async function shortenURL() {
   document.getElementById('btn-label').textContent = 'Generating...';
 
   const expiresAt = getSelectedExpiry();
+  const pwEnabled = document.getElementById('pw-toggle').classList.contains('on');
+  const password  = pwEnabled ? document.getElementById('link-password').value : '';
+
+  if (pwEnabled && password.trim().length < 4) {
+    showToast('error', 'Password must be at least 4 characters.');
+    return;
+  }
 
   try {
-    const entry = await apiCreate(rawUrl, slug, expiresAt);
+    const entry = await apiCreate(rawUrl, slug, expiresAt, password);
     lastEntry = entry;
 
     addLocalLink(entry); // save into THIS browser's private history only
@@ -270,6 +304,16 @@ function showResult(entry) {
   expiryEl.textContent = label ? `⏱ ${label}` : '';
   expiryEl.style.display = label ? 'block' : 'none';
 
+  let lockEl = document.getElementById('result-locked');
+  if (!lockEl) {
+    lockEl = document.createElement('div');
+    lockEl.id = 'result-locked';
+    lockEl.className = 'result-locked';
+    expiryEl.insertAdjacentElement('afterend', lockEl);
+  }
+  lockEl.textContent = entry.protected ? '🔒 Password protected' : '';
+  lockEl.style.display = entry.protected ? 'block' : 'none';
+
   cpBtn.classList.remove('copied');
   cpBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span>`;
 
@@ -301,6 +345,7 @@ function shortenAnother() {
   document.getElementById('clear-btn').style.display = 'none';
   document.getElementById('lp-slug').textContent = 'my-link';
   resetExpirySelector();
+  resetPasswordToggle();
   lastEntry = null;
   document.getElementById('long-url').focus();
 }
@@ -366,6 +411,7 @@ function renderHistory(filter = '') {
           <a class="hist-link" href="${esc(short)}" target="_blank" rel="noopener">${esc(display)}</a>
           <span class="hist-clicks">${clicks} click${clicks !== 1 ? 's' : ''}</span>
           ${expLabel ? `<span class="hist-expiry">⏱ ${esc(expLabel)}</span>` : ''}
+          ${e.protected ? `<span class="hist-locked">🔒 Locked</span>` : ''}
         </div>
         <div class="hist-orig" title="${esc(e.original)}">${esc(e.original)}</div>
       </div>
@@ -543,6 +589,77 @@ function closeEditModal() {
 
 function handleEditModalBgClick(e) { if (e.target.id === 'edit-modal-bg') closeEditModal(); }
 
+/* ── PASSWORD UNLOCK FLOW ─────────────────────────────── */
+async function apiResolve(slug) {
+  const res = await fetch(`/api/resolve?slug=${encodeURIComponent(slug)}`);
+  if (!res.ok) return { found: false };
+  return res.json();
+}
+
+async function apiUnlock(slug, password) {
+  const res = await fetch('/api/unlock', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Incorrect password.');
+  return data.url;
+}
+
+let _unlockSlug = null;
+
+function openUnlockModal(slug) {
+  _unlockSlug = slug;
+  document.getElementById('unlock-error').style.display = 'none';
+  document.getElementById('unlock-password-input').value = '';
+  document.getElementById('unlock-modal-bg').style.display = 'flex';
+  setTimeout(() => document.getElementById('unlock-password-input').focus(), 100);
+}
+
+function closeUnlockModal() {
+  closeModalAnimated('unlock-modal-bg');
+  _unlockSlug = null;
+}
+
+async function submitUnlock() {
+  const input = document.getElementById('unlock-password-input');
+  const errEl = document.getElementById('unlock-error');
+  const btn   = document.getElementById('unlock-submit-btn');
+  const password = input.value;
+
+  if (!password) {
+    errEl.textContent = 'Please enter the password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Checking...';
+  errEl.style.display = 'none';
+
+  try {
+    const url = await apiUnlock(_unlockSlug, password);
+    window.location.replace(url);
+  } catch (err) {
+    errEl.textContent = err.message || 'Incorrect password.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Unlock';
+  }
+}
+
+async function checkForProtectedLink() {
+  const slug = decodeURIComponent(window.location.pathname.slice(1)).replace(/\/$/, '');
+  if (!slug) return;
+  try {
+    const result = await apiResolve(slug);
+    if (result.found && result.protected) {
+      openUnlockModal(slug);
+    }
+  } catch { /* silently ignore, just show the landing page */ }
+}
+
 /* ── QR CODE ─────────────────────────────────────────── */
 let _qrCurrentUrl = null;
 
@@ -708,7 +825,8 @@ document.getElementById('long-url').addEventListener('input', function() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && ['long-url','custom-slug'].includes(e.target.id)) shortenURL();
   if (e.key === 'Enter' && e.target.id === 'edit-url-input') doEdit();
-  if (e.key === 'Escape') { closeModal(); closeQrModal(); closeEditModal(); }
+  if (e.key === 'Enter' && e.target.id === 'unlock-password-input') submitUnlock();
+  if (e.key === 'Escape') { closeModal(); closeQrModal(); closeEditModal(); closeUnlockModal(); }
 });
 
 document.querySelectorAll('.expiry-opt').forEach(btn => {
@@ -730,6 +848,7 @@ document.querySelectorAll('.expiry-opt').forEach(btn => {
 
 /* ── INIT ────────────────────────────────────────────── */
 refreshAll();
+checkForProtectedLink();
 
 /* ── MOBILE NAV DROPDOWN ──────────────────────────────── */
 function toggleMobileNav() {

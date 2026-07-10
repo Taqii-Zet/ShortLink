@@ -1,4 +1,5 @@
 import { redis } from '../lib/redis.js';
+import { hashPassword } from '../lib/hash.js';
 
 const RESERVED = ['s', 'r', 'api', 'www', 'admin', 'app', 'login', 'signup', 'help'];
 const SLUG_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -15,7 +16,7 @@ function randomSlug() {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  let { url, slug, expiresAt: rawExpiresAt } = req.body || {};
+  let { url, slug, expiresAt: rawExpiresAt, password } = req.body || {};
   if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL is required' });
 
   url = url.trim();
@@ -48,7 +49,25 @@ export default async function handler(req, res) {
     ttlSeconds = Math.ceil((ts - Date.now()) / 1000);
   }
 
-  const entry = { slug, original: url, createdAt: Date.now(), expiresAt };
+  let passwordHash = null;
+  let passwordSalt = null;
+  if (password && typeof password === 'string' && password.trim()) {
+    if (password.trim().length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters.' });
+    }
+    const hashed = hashPassword(password.trim());
+    passwordHash = hashed.hash;
+    passwordSalt = hashed.salt;
+  }
+
+  const entry = {
+    slug,
+    original: url,
+    createdAt: Date.now(),
+    expiresAt,
+    passwordHash,
+    passwordSalt,
+  };
 
   if (ttlSeconds) {
     await redis.set(`link:${slug}`, entry, { ex: ttlSeconds });
@@ -58,5 +77,6 @@ export default async function handler(req, res) {
   }
   await redis.zadd('links:index', { score: entry.createdAt, member: slug });
 
-  return res.status(200).json({ entry: { ...entry, clicks: 0 } });
+  const { passwordHash: _ph, passwordSalt: _ps, ...publicEntry } = entry;
+  return res.status(200).json({ entry: { ...publicEntry, clicks: 0, protected: !!passwordHash } });
 }

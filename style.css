@@ -1441,3 +1441,73 @@ body {
   60%    { transform: translateX(-4px); }
   80%    { transform: translateX(4px); }
 }
+
+/* ── PASSWORD PROTECTION TOGGLE ────────────────────── */
+.pw-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.pw-toggle {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.25s var(--ease-out), border-color 0.25s var(--ease-out);
+}
+.pw-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: var(--text-mute);
+  border-radius: 50%;
+  transition: transform 0.3s var(--ease-spring), background 0.25s ease;
+}
+.pw-toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.pw-toggle.on .pw-toggle-knob {
+  transform: translateX(18px);
+  background: var(--bg);
+}
+.pw-toggle-label {
+  font-size: 0.85rem;
+  color: var(--text-mute);
+}
+
+.pw-input-wrap {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  transition: max-height 0.3s var(--ease-out), opacity 0.25s var(--ease-out), margin-top 0.3s var(--ease-out);
+}
+.pw-input-wrap.show {
+  max-height: 70px;
+  opacity: 1;
+  margin-top: 10px;
+}
+
+.hist-locked {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.14);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.result-locked {
+  font-size: 0.8rem;
+  color: #a78bfa;
+  margin-top: 2px;
+}

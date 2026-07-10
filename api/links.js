@@ -14,7 +14,11 @@ export default async function handler(req, res) {
     ]);
 
     const links = entries
-      .map((e, i) => (e ? { ...e, clicks: Number(clicks[i]) || 0 } : null))
+      .map((e, i) => {
+        if (!e) return null;
+        const { passwordHash, passwordSalt, ...rest } = e;
+        return { ...rest, clicks: Number(clicks[i]) || 0, protected: !!passwordHash };
+      })
       .filter(Boolean);
 
     return res.status(200).json({ links });
@@ -37,7 +41,8 @@ export default async function handler(req, res) {
     await redis.set(`link:${slug}`, updated);
 
     const clicks = await redis.get(`clicks:${slug}`);
-    return res.status(200).json({ entry: { ...updated, clicks: Number(clicks) || 0 } });
+    const { passwordHash, passwordSalt, ...publicUpdated } = updated;
+    return res.status(200).json({ entry: { ...publicUpdated, clicks: Number(clicks) || 0, protected: !!passwordHash } });
   }
 
   if (req.method === 'DELETE') {
