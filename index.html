@@ -129,7 +129,7 @@
             <button type="button" class="expiry-opt" data-value="30d">30 days</button>
             <button type="button" class="expiry-opt" data-value="custom">Custom date</button>
           </div>
-          <input type="date" id="expiry-custom-date" class="field-input expiry-date-input" style="display:none" />
+          <input type="date" id="expiry-custom-date" class="field-input expiry-date-input" />
         </div>
 
         <!-- Password Protection -->
@@ -431,25 +431,6 @@
       <div class="modal-btns">
         <button class="mbtn mbtn-ghost" onclick="closeEditModal()">Cancel</button>
         <button class="mbtn mbtn-accent" id="edit-modal-save" onclick="doEdit()">Save changes</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== UNLOCK MODAL (protected link) ===== -->
-  <div class="modal-bg" id="unlock-modal-bg" style="display:none">
-    <div class="modal-box">
-      <div class="modal-icon edit-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      </div>
-      <h3>Protected link</h3>
-      <p>This link requires a password before you can continue.</p>
-      <div style="text-align:left; margin-bottom: 20px;">
-        <input type="password" id="unlock-password-input" class="edit-url-input" placeholder="Enter password" autocomplete="off" />
-        <p id="unlock-error" class="slug-status err" style="display:none; margin-top:8px;"></p>
-      </div>
-      <div class="modal-btns">
-        <button class="mbtn mbtn-ghost" onclick="closeUnlockModal()">Cancel</button>
-        <button class="mbtn mbtn-accent" id="unlock-submit-btn" onclick="submitUnlock()">Unlock</button>
       </div>
     </div>
   </div>

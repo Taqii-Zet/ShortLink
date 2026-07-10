@@ -19,7 +19,11 @@ export default async function middleware(request, event) {
   const entry = await redis.get(`link:${slug}`);
   if (!entry || !entry.original) return;
 
-  if (entry.passwordHash) return; // protected — let the page load and prompt for a password
+  if (entry.passwordHash) {
+    const unlockUrl = new URL('/unlock.html', request.url);
+    unlockUrl.searchParams.set('slug', slug);
+    return Response.redirect(unlockUrl, 307);
+  }
 
   event.waitUntil(redis.incr(`clicks:${slug}`));
 

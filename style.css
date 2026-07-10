@@ -1511,3 +1511,65 @@ body {
   color: #a78bfa;
   margin-top: 2px;
 }
+
+/* ── UNLOCK PAGE ───────────────────────────────────── */
+.unlock-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.unlock-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  animation: pop-in 0.3s var(--ease-spring);
+}
+.unlock-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 32px;
+}
+.unlock-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+.unlock-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.unlock-sub {
+  font-size: 0.9rem;
+  color: var(--text-mute);
+  margin-bottom: 28px;
+}
+.unlock-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+.unlock-notfound {
+  color: var(--text-mute);
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
